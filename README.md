@@ -7,4 +7,4 @@ buscar y gestionar el intercambio o venta de recursos educativos de manera efici
 🏅 Fase 1 Concepción (Hito 1): Esta fase inicial tiene como objetivo definir el alcance del proyecto,
 identificar a los stakeholders y obtener una visión clara de lo que se va a construir. Consultar el documento Google Docs para más detalles.
 
-🔗 Enlace: https://docs.google.com/document/d/1JxZwRNwTaP0nPBY7QdY3rJ4Q5Lwf_Jfi07kFBxR52pc/edit?usp=sharing
+🔗 Enlace al prototipo en Figma: https://www.figma.com/design/F6OfC1GvfWCMgNhFGVdxyJ/Book-Store-Web-App--Community-?node-id=0-1&t=SBU8SIKBebMumoex-1
