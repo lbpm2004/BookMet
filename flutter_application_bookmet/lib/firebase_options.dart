@@ -85,4 +85,5 @@ class DefaultFirebaseOptions {
     storageBucket: 'bookmet-bd.firebasestorage.app',
     measurementId: 'G-9YMQ70TZFT',
   );
+
 }
