@@ -22,3 +22,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/images/BookMetLogo.png
+    - assets/images/fondo_unimet.jpg

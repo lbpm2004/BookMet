@@ -3,32 +3,48 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // REGISTRO: Guarda en Auth y luego crea el documento en Firestore
+  // Iniciar sesión
+  Future<void> iniciarSesion(String email, String password) async {
+    try {
+      await _auth.signInWithEmailAndPassword(email: email, password: password);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Registrar usuario con nombre y apellido separados
   Future<void> registrarUsuario({
     required String nombre,
+    required String apellido, // <-- NUEVO PARÁMETRO
     required String carnet,
     required String email,
     required String password,
   }) async {
-    // Esto crea el usuario en la lista de "Authentication"
-    UserCredential resultado = await _auth.createUserWithEmailAndPassword(
-      email: email,
-      password: password,
-    );
+    try {
+      // 1. Crear el usuario en Firebase Authentication (correo y contraseña)
+      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
 
-    // Esto guarda los datos extra (nombre, carnet) en la base de datos "usuarios"
-    await _db.collection('usuarios').doc(resultado.user!.uid).set({
-      'nombre': nombre,
-      'carnet': carnet,
-      'email': email,
-      'uid': resultado.user!.uid,
-    });
+      // 2. Guardar los datos en Firestore (Base de Datos)
+      await _firestore.collection('usuarios').doc(userCredential.user!.uid).set({
+        'uid': userCredential.user!.uid,
+        'nombre': nombre,
+        'apellido': apellido, // <-- SE GUARDA SEPARADO AQUÍ
+        'carnet': carnet,
+        'email': email,
+      });
+      
+    } catch (e) {
+      rethrow;
+    }
   }
 
-  // LOGIN: Verifica credenciales
-  Future<void> iniciarSesion(String email, String password) async {
-    await _auth.signInWithEmailAndPassword(email: email, password: password);
+  // Cerrar sesión
+  Future<void> cerrarSesion() async {
+    await _auth.signOut();
   }
 }
