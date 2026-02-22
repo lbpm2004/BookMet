@@ -17,10 +17,11 @@ class AuthService {
   // Registrar usuario con nombre y apellido separados
   Future<void> registrarUsuario({
     required String nombre,
-    required String apellido, // <-- NUEVO PARÁMETRO
+    required String apellido,
     required String carnet,
     required String email,
     required String password,
+    required String fotoUrl,
   }) async {
     try {
       // 1. Crear el usuario en Firebase Authentication (correo y contraseña)
@@ -33,9 +34,10 @@ class AuthService {
       await _firestore.collection('usuarios').doc(userCredential.user!.uid).set({
         'uid': userCredential.user!.uid,
         'nombre': nombre,
-        'apellido': apellido, // <-- SE GUARDA SEPARADO AQUÍ
+        'apellido': apellido, 
         'carnet': carnet,
         'email': email,
+        'fotoPerfil': fotoUrl,
       });
       
     } catch (e) {

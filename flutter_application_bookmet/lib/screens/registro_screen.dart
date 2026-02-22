@@ -1,3 +1,6 @@
+import 'dart:typed_data'; 
+import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../widgets/fondo_con_blur.dart'; 
@@ -21,7 +24,82 @@ class _RegistroScreenState extends State<RegistroScreen> {
   final AuthService _authService = AuthService();
   bool _isLoading = false;
 
+  Uint8List? _imagenBytes; // <-- En web guardamos los bytes
+  final ImagePicker _picker = ImagePicker();
+
+  Future<void> _seleccionarFoto() async {
+    final XFile? imagen = await _picker.pickImage(source: ImageSource.gallery);
+    if (imagen != null) {
+      // Leemos los bytes de la imagen para la Web
+      final bytes = await imagen.readAsBytes(); 
+      setState(() {
+        _imagenBytes = bytes;
+      });
+    }
+  }
+
+  Future<String?> _subirFotoSupabase(String uidUsuario) async {
+    if (_imagenBytes == null) return null;
+
+    try {
+      final String rutaArchivo = '$uidUsuario.jpg';
+
+      // Usamos uploadBinary que es el método compatible con Flutter Web
+      await Supabase.instance.client.storage
+          .from('perfiles')
+          .uploadBinary(
+            rutaArchivo, 
+            _imagenBytes!,
+            fileOptions: const FileOptions(contentType: 'image/jpeg'), // Le decimos a Supabase que es una imagen
+          );
+
+      final String urlPublica = Supabase.instance.client.storage
+          .from('perfiles')
+          .getPublicUrl(rutaArchivo);
+
+      return urlPublica;
+    } catch (e) {
+      print('Error al subir a Supabase: $e');
+      return null;
+    }
+  }
+
   void _registrar() async {
+    if (_formKey.currentState!.validate()) {
+      setState(() => _isLoading = true);
+      try {
+        // 1. Subir la foto a Supabase (si el usuario seleccionó una)
+        String? linkFoto;
+        if (_imagenBytes != null) {
+          // Usamos el carnet como nombre del archivo (ej. "2024001.jpg")
+          linkFoto = await _subirFotoSupabase(_carnetController.text.trim());
+        }
+
+        // 2. Registrar en Firebase a través de tu AuthService
+        await _authService.registrarUsuario(
+          nombre: _nombreController.text.trim(),
+          apellido: _apellidoController.text.trim(), 
+          carnet: _carnetController.text.trim(),
+          email: _correoController.text.trim(),
+          password: _passwordController.text.trim(),
+          fotoUrl: linkFoto ?? '', // <--- ¡Añadimos este nuevo parámetro!
+        );
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('¡Registro Exitoso! Ahora inicia sesión'), backgroundColor: Colors.green),
+        );
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const LoginScreen()));
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.red),
+        );
+      } finally {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  /* ANTIGUA FUNCION DE REGISTRO SIN SUPABASE void _registrar() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
       try {
@@ -45,7 +123,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
         setState(() => _isLoading = false);
       }
     }
-  }
+  }*/
 
   // Función auxiliar para dibujar las casillas de texto elegantemente
   Widget _buildTextField({
@@ -122,6 +200,31 @@ class _RegistroScreenState extends State<RegistroScreen> {
                     ),
                     const SizedBox(height: 30),
                     
+                    // ---> INICIO DEL CÓDIGO DE LA FOTO DE PERFIL <---
+                    GestureDetector(
+                      onTap: _seleccionarFoto, // Llama a tu función al hacer clic
+                      child: CircleAvatar(
+                        radius: 50, // Tamaño del círculo
+                        backgroundColor: Colors.orange.withOpacity(0.1),
+                        // Si hay bytes en memoria, muestra la imagen, si no, es nulo
+                        backgroundImage: _imagenBytes != null 
+                            ? MemoryImage(_imagenBytes!) 
+                            : null,
+                        // Si no hay imagen, muestra un ícono de cámara por defecto
+                        child: _imagenBytes == null
+                            ? const Icon(Icons.add_a_photo, size: 40, color: Colors.orange)
+                            : null,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'Subir foto de perfil',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey, fontSize: 12),
+                    ),
+                    const SizedBox(height: 20),
+                    // ---> FIN DEL CÓDIGO DE LA FOTO DE PERFIL <---
+
                     // Nombre
                     _buildTextField(
                       controller: _nombreController,
