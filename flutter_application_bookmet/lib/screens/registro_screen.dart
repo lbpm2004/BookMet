@@ -99,32 +99,6 @@ class _RegistroScreenState extends State<RegistroScreen> {
     }
   }
 
-  /* ANTIGUA FUNCION DE REGISTRO SIN SUPABASE void _registrar() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() => _isLoading = true);
-      try {
-        await _authService.registrarUsuario(
-          // ¡Aquí los enviamos separados al AuthService!
-          nombre: _nombreController.text.trim(),
-          apellido: _apellidoController.text.trim(), 
-          carnet: _carnetController.text.trim(),
-          email: _correoController.text.trim(),
-          password: _passwordController.text.trim(),
-        );
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('¡Registro Exitoso! Ahora inicia sesión'), backgroundColor: Colors.green),
-        );
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const LoginScreen()));
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.red),
-        );
-      } finally {
-        setState(() => _isLoading = false);
-      }
-    }
-  }*/
-
   // Función auxiliar para dibujar las casillas de texto elegantemente
   Widget _buildTextField({
     required TextEditingController controller,
@@ -167,7 +141,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black87), 
+        iconTheme: const IconThemeData(color: Colors.white), 
       ),
       body: FondoConBlur(
         child: Center(
