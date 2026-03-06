@@ -27,3 +27,7 @@ flutter:
   assets:
     - assets/images/BookMetLogo.png
     - assets/images/fondo_unimet.jpg
+    - assets/images/Header.png
+    - assets/images/Book - transition.png
+    - assets/images/Book_transparent.png
+    - assets/images/Papel-rasgado.png

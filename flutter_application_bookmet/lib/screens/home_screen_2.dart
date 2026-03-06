@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+class HomeScreen_2 extends StatelessWidget {
+  const HomeScreen_2({Key? key}) : super(key: key);
 
   // Definimos los colores del diseño para usarlos fácilmente
   final Color kPrimaryOrange = const Color(0xFFF57C00); // Naranja similar al diseño
