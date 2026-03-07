@@ -7,6 +7,7 @@ class HomeScreen extends StatelessWidget {
   // Definimos los colores del diseño para usarlos fácilmente
   final Color kPrimaryOrange = const Color(0xFFFF8200); // Naranja similar al diseño
   final Color kDarkBlue = const Color(0xFF003087);      // Azul oscuro del botón
+  final Color kMedBlue = const Color(0xFF1859A9);
 
   @override
   Widget build(BuildContext context) {
@@ -33,6 +34,39 @@ class HomeScreen extends StatelessWidget {
 
             // 3. Ilustración y Footer Inferior
             _buildFooterIllustration(size),
+
+            //4. Misión y Visión traidos de "Acerca de"
+            Transform.translate( //para evitar espacio en blanco entre las secciones
+              offset: const Offset(0, -1),
+              child: Container(
+                  width: double.infinity,
+                  //transición de colores:
+                  decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [const Color(0xFFFFA522), kPrimaryOrange], stops: const [0.0, 0.2])),
+
+                  padding: EdgeInsets.symmetric(
+                    horizontal: size.width * 0.1, 
+                    vertical: 60
+                  ),
+                  child: size.width > 800 
+                      ? Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Expanded(flex: 4, child: _buildCircularImage()),
+                            const SizedBox(width: 60),
+                            Expanded(flex: 6, child: _buildTextContent()),
+                          ],
+                        )
+                      : Column( // Si la pantalla es pequeña, apilamos los elementos
+                          children: [
+                            _buildCircularImage(),
+                            const SizedBox(height: 40),
+                            _buildTextContent(),
+                          ],
+                        ),
+                ),
+            ),
+            const SizedBox(height: 50)
+
           ],
         ),
       ),
@@ -73,7 +107,7 @@ class HomeScreen extends StatelessWidget {
           ],
 
           //Estructura condicional:
-          if (user == null)
+          if (user == null) ...[
           ElevatedButton(
             // ¡Navegación al Login!
             onPressed: () => Navigator.pushNamed(context, '/login'),
@@ -82,8 +116,19 @@ class HomeScreen extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
             ),
             child: const Text('Iniciar sesión', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          )
+          ),
+          const SizedBox(width: 50),
 
+          ElevatedButton(
+            // Navegación al registro
+            onPressed: () => Navigator.pushNamed(context, '/registro'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: kMedBlue,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+            ),
+            child: const Text('Registrarse', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          )
+          ]
           else
             ElevatedButton.icon(
               onPressed: () {
@@ -155,15 +200,92 @@ class HomeScreen extends StatelessWidget {
 
   // --- Widget de la Ilustración y Footer ---
   Widget _buildFooterIllustration(Size size) {
-    // Usamos un Stack para superponer el libro sobre la onda naranja
     return Container(
       width: double.infinity,
       child: Image.asset('assets/images/Book - transition.png',
       width: size.width,
-      fit: BoxFit.cover,
+      fit: BoxFit.fitWidth,
+      gaplessPlayback: true,
       )
     );
   }
+
+
+
+//----Widget de Acerca De------
+// --- El contenido de texto (Misión, Visión y Estadísticas) ---
+  Widget _buildTextContent() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          '¡Bienvenido a BOOKMET!',
+          style: TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 20),
+        const Text(
+          'Accede a una de las colecciones más completas del país. Disfruta de espacios de estudio colaborativo, consulta bases de datos de clase mundial y encuentra el soporte académico necesario para llevar tu carrera al siguiente nivel. ¡Explora, investiga e innova con nosotros!',
+          style: TextStyle(color: Colors.white, fontSize: 16, height: 1.5),
+        ),
+        const SizedBox(height: 30),
+        
+        // Misión
+        const Text('Nuestra Misión', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        const Text(
+          'Buscamos que el acceso a materiales de estudio en la UNIMET deje de ser un obstáculo. Nuestra misión es conectar a la comunidad universitaria a través de una plataforma donde el intercambio y la venta de materiales de estudio sean procesos ágiles, seguros y totalmente trazables.',
+          style: TextStyle(color: Colors.white, fontSize: 16, height: 1.5),
+        ),
+        const SizedBox(height: 20),
+
+        // Visión
+        const Text('Nuestra Visión', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        const Text(
+          'Queremos ser el ecosistema digital de referencia para el material académico en la universidad. Nos vemos como una herramienta centralizada que simplifique la vida del estudiante y el docente, haciendo que gestionar recursos sea algo orgánico y eficiente.',
+          style: TextStyle(color: Colors.white, fontSize: 16, height: 1.5),
+        ),
+        const SizedBox(height: 40),
+
+        // Estadísticas de la imagen
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _buildStat('3k+', 'Recursos\nAcadémicos'),
+            _buildStat('5K+', 'Miembros\nComunidad'),
+            _buildStat('200+', 'Bases de Datos\ny Revistas'),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // --- El placeholder del círculo con los libros ---
+  Widget _buildCircularImage() {
+    return Container(
+      height: 400,
+      width: 400,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.white,
+        //border: Border.all(color: Colors.white, width: 8), // Borde blanco grueso
+        boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 10)],
+        image: const DecorationImage(image: AssetImage('assets/images/Acerca_de.png'))
+      ),
+    );
+  }
+
+//para las estadísticas:
+  Widget _buildStat(String number, String label) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(number, style: const TextStyle(color: Colors.black87, fontSize: 32, fontWeight: FontWeight.bold)),
+        Text(label, style: const TextStyle(color: Colors.black87, fontSize: 14, fontWeight: FontWeight.w600)),
+      ],
+    );
+  }
+//-----------------------------
 
 //Metodo para construir el Drawer
   Widget _buildDrawer(BuildContext context) {
