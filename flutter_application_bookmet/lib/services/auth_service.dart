@@ -49,4 +49,13 @@ class AuthService {
   Future<void> cerrarSesion() async {
     await _auth.signOut();
   }
+
+  //Recuperar contraseña
+  Future<void> recuperarPassword(String email) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+    } catch (e) {
+      throw Exception('Error al enviar correo de recuperación: $e');
+    }
+  }
 }

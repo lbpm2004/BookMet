@@ -29,7 +29,8 @@ class _LoginScreenState extends State<LoginScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('¡Bienvenido de nuevo! 📚'), backgroundColor: Colors.green),
         );
-        // Navigator.pushReplacementNamed(context, '/home'); // Descomentar cuando tengamos el Home
+        Navigator.pushReplacementNamed(context, '/'); // Descomentar cuando tengamos el Home
+        
       } on FirebaseAuthException catch (e) {
         String mensajeError = 'Ocurrió un error inesperado';
         if (e.code == 'user-not-found' || e.code == 'invalid-credential') {
@@ -183,6 +184,27 @@ class _LoginScreenState extends State<LoginScreen> {
                       },
                       child: Text('¿No tienes cuenta? Regístrate aquí', style: TextStyle(color: Colors.grey[800], fontWeight: FontWeight.bold)),
                     ),
+
+                    //Boton Recuperacion de contraseña
+                    TextButton(
+                       onPressed: () async {
+                        if (_correoController.text.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Por favor, ingresa tu correo para recuperar tu contraseña')));
+                            return;
+                        }
+                        try {
+                          await _authService.recuperarPassword(_correoController.text.trim());
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Correo de recuperación enviado 📧'))
+                          );
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Error al enviar correo de recuperación de contraseña')));
+                        }
+                       },
+                       child: const Text('¿Olvidaste tu contraseña? Recuperar contraseña.', style: TextStyle(color: Colors.orange))
+                       ),
                   ],
                 ),
               ),
