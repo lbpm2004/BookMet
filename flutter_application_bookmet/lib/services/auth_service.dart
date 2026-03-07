@@ -1,52 +1,66 @@
+import 'dart:typed_data'; // Añadir para los bytes de la imagen
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart'; 
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final SupabaseClient _supabase = Supabase.instance.client; 
 
-  // Iniciar sesión
-  Future<void> iniciarSesion(String email, String password) async {
-    try {
-      await _auth.signInWithEmailAndPassword(email: email, password: password);
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  // Registrar usuario con nombre y apellido separados
+  // Registrar usuario (AHORA RECIBE LOS BYTES DE LA FOTO)
   Future<void> registrarUsuario({
     required String nombre,
     required String apellido,
     required String cedula,
     required String email,
     required String password,
-    required String fotoUrl,
+    Uint8List? fotoBytes, // <-- Recibimos el archivo, no el URL
   }) async {
     try {
-      // 1. Crear el usuario en Firebase Authentication (correo y contraseña)
+      String fotoUrl = '';
+
+      // 1. Subir a Supabase (LA LÓGICA SE MUDÓ AQUÍ)
+      if (fotoBytes != null) {
+        final String nombreArchivo = '${DateTime.now().millisecondsSinceEpoch}.jpg';
+        await _supabase.storage.from('perfiles').uploadBinary(
+          nombreArchivo, 
+          fotoBytes,
+          fileOptions: const FileOptions(contentType: 'image/jpeg'),
+        );
+        fotoUrl = _supabase.storage.from('perfiles').getPublicUrl(nombreArchivo);
+      }
+
+      // 2. Crear el usuario en Firebase Auth
       UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
 
-      // 2. Lógica dinámica para asignar el ROL
-      // Si termina en @unimet.edu.ve es DOCENTE, de lo contrario es ESTUDIANTE
+      // 3. Asignar ROL
       String rolAsignado = email.endsWith('@unimet.edu.ve') ? 'DOCENTE' : 'ESTUDIANTE';
 
-
-      // 2. Guardar los datos en Firestore (Base de Datos)
+      // 4. Guardar los datos en Firestore
       await _firestore.collection('usuarios').doc(userCredential.user!.uid).set({
         'uid': userCredential.user!.uid,
         'nombre': nombre,
         'apellido': apellido, 
         'cedula': cedula,
         'email': email,
-        'fotoPerfil': fotoUrl,
+        'fotoPerfil': fotoUrl, // Pasamos el URL generado arriba
         'estaActivo': true,
         'rol': rolAsignado,
       });
       
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Iniciar sesión
+  Future<void> iniciarSesion(String email, String password) async {
+    try {
+      await _auth.signInWithEmailAndPassword(email: email, password: password);
     } catch (e) {
       rethrow;
     }

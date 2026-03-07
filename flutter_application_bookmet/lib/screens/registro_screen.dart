@@ -1,6 +1,5 @@
 import 'dart:typed_data'; 
 import 'package:image_picker/image_picker.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -37,52 +36,19 @@ class _RegistroScreenState extends State<RegistroScreen> {
     }
   }
 
-  Future<String?> _subirFotoSupabase(String nombreArchivo) async {
-    if (_imagenBytes == null) return null;
-
-    try {
-      final String rutaArchivo = '$nombreArchivo.jpg';
-
-      await Supabase.instance.client.storage
-          .from('perfiles')
-          .uploadBinary(
-            rutaArchivo, 
-            _imagenBytes!,
-            fileOptions: const FileOptions(contentType: 'image/jpeg'), 
-          );
-
-      final String urlPublica = Supabase.instance.client.storage
-          .from('perfiles')
-          .getPublicUrl(rutaArchivo);
-
-      return urlPublica;
-    } catch (e) {
-      print('Error al subir a Supabase: $e');
-      return null;
-    }
-  }
-
   void _registrar() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
       try {
-        // 1. Subir la foto a Supabase (si seleccionó una)
-        String? linkFoto;
-        if (_imagenBytes != null) {
-          // Generamos un nombre único basado en la fecha/hora actual
-          // Así evitamos errores si la cédula/carnet está vacía
-          final String nombreUnico = DateTime.now().millisecondsSinceEpoch.toString();
-          linkFoto = await _subirFotoSupabase(nombreUnico);
-        }
 
-        // 2. Registrar en Firebase a través del AuthService
+        // Registrar todo en Firebase y Supabase a través del AuthService
         await _authService.registrarUsuario(
           nombre: _nombreController.text.trim(),
           apellido: _apellidoController.text.trim(), 
           cedula: _cedulaController.text.trim(), // Puede ir vacío sin problema
           email: _correoController.text.trim(),
           password: _passwordController.text.trim(),
-          fotoUrl: linkFoto ?? '', 
+          fotoBytes: _imagenBytes, // <-- Pasamos los bytes crudos directamente
         );
 
         if (!mounted) return;
