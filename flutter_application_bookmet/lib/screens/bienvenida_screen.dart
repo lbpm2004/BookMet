@@ -175,15 +175,15 @@ class BienvenidaScreen extends StatelessWidget {
       children:[
         const Text('¡Bienvenido a BOOKMET!', style: TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.bold)),
         const SizedBox(height: 20),
-        const Text('Accede a una de las colecciones más completas del país. Disfruta de espacios de estudio colaborativo...', style: TextStyle(color: Colors.white, fontSize: 16, height: 1.5)),
+        const Text('Accede a una de las colecciones más completas del país. Disfruta de espacios de estudio colaborativo, consulta bases de datos de clase mundial y encuentra el soporte académico necesario para llevar tu carrera al siguiente nivel. ¡Explora, investiga e innova con nosotros!', style: TextStyle(color: Colors.white, fontSize: 16, height: 1.5)),
         const SizedBox(height: 30),
         const Text('Nuestra Misión', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
-        const Text('Buscamos que el acceso a materiales de estudio en la UNIMET deje de ser un obstáculo...', style: TextStyle(color: Colors.white, fontSize: 16, height: 1.5)),
+        const Text('Buscamos que el acceso a materiales de estudio en la UNIMET deje de ser un obstáculo. Nuestra misión es conectar a la comunidad universitaria a través de una plataforma donde el intercambio y la venta de materiales de estudio sean procesos ágiles, seguros y totalmente trazables.', style: TextStyle(color: Colors.white, fontSize: 16, height: 1.5)),
         const SizedBox(height: 20),
         const Text('Nuestra Visión', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
-        const Text('Queremos ser el ecosistema digital de referencia...', style: TextStyle(color: Colors.white, fontSize: 16, height: 1.5)),
+        const Text('Queremos ser el ecosistema digital de referencia para el material académico en la universidad. Nos vemos como una herramienta centralizada que simplifique la vida del estudiante y el docente, haciendo que gestionar recursos sea algo orgánico y eficiente.', style: TextStyle(color: Colors.white, fontSize: 16, height: 1.5)),
         const SizedBox(height: 40),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,

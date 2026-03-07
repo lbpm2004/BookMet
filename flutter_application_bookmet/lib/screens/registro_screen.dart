@@ -3,6 +3,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/fondo_con_blur.dart'; 
 
 class RegistroScreen extends StatefulWidget {
@@ -91,10 +92,33 @@ class _RegistroScreenState extends State<RegistroScreen> {
         // Usamos rutas nombradas para mantener la coherencia con el diagrama
         Navigator.pushReplacementNamed(context, '/login'); 
         
-      } catch (e) {
+      } on FirebaseAuthException catch (e) {
+        String mensajeError = 'Ocurrió un error al registrar el usuario.';
+
+        // Traducimos los códigos más comunes de Firebase al español
+        if (e.code == 'email-already-in-use') {
+          mensajeError = 'Este correo electrónico ya está registrado. Intenta iniciar sesión.';
+        } else if (e.code == 'weak-password') {
+          mensajeError = 'La contraseña es muy débil. Debe tener al menos 6 caracteres.';
+        } else if (e.code == 'invalid-email') {
+          mensajeError = 'El formato del correo electrónico no es válido.';
+        } else if (e.code == 'operation-not-allowed') {
+          mensajeError = 'El registro por correo está deshabilitado en el sistema.';
+        } else {
+          // Si es un error raro, mostramos el código para poder rastrearlo
+          mensajeError = 'Error: ${e.code}'; 
+        }
+
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.red),
+          SnackBar(content: Text(mensajeError), backgroundColor: Colors.red),
+        );
+        
+      } catch (e) {
+        // Para cualquier otro error que no sea de Firebase (ej. no hay internet)
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Ocurrió un error inesperado en el sistema.'), backgroundColor: Colors.red),
         );
       } finally {
         if (mounted) {
