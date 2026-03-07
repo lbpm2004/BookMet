@@ -4,7 +4,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../widgets/fondo_con_blur.dart'; 
-import 'login_screen.dart';
 
 class RegistroScreen extends StatefulWidget {
   const RegistroScreen({Key? key}) : super(key: key);
@@ -16,21 +15,20 @@ class RegistroScreen extends StatefulWidget {
 class _RegistroScreenState extends State<RegistroScreen> {
   // Controladores para leer lo que escribe el usuario
   final _nombreController = TextEditingController();
-  final _apellidoController = TextEditingController(); // Controlador para el apellido
-  final _carnetController = TextEditingController();
+  final _apellidoController = TextEditingController(); 
+  final _cedulaController = TextEditingController();
   final _correoController = TextEditingController();
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   final AuthService _authService = AuthService();
   bool _isLoading = false;
 
-  Uint8List? _imagenBytes; // <-- En web guardamos los bytes
+  Uint8List? _imagenBytes; 
   final ImagePicker _picker = ImagePicker();
 
   Future<void> _seleccionarFoto() async {
     final XFile? imagen = await _picker.pickImage(source: ImageSource.gallery);
     if (imagen != null) {
-      // Leemos los bytes de la imagen para la Web
       final bytes = await imagen.readAsBytes(); 
       setState(() {
         _imagenBytes = bytes;
@@ -38,19 +36,18 @@ class _RegistroScreenState extends State<RegistroScreen> {
     }
   }
 
-  Future<String?> _subirFotoSupabase(String uidUsuario) async {
+  Future<String?> _subirFotoSupabase(String nombreArchivo) async {
     if (_imagenBytes == null) return null;
 
     try {
-      final String rutaArchivo = '$uidUsuario.jpg';
+      final String rutaArchivo = '$nombreArchivo.jpg';
 
-      // Usamos uploadBinary que es el método compatible con Flutter Web
       await Supabase.instance.client.storage
           .from('perfiles')
           .uploadBinary(
             rutaArchivo, 
             _imagenBytes!,
-            fileOptions: const FileOptions(contentType: 'image/jpeg'), // Le decimos a Supabase que es una imagen
+            fileOptions: const FileOptions(contentType: 'image/jpeg'), 
           );
 
       final String urlPublica = Supabase.instance.client.storage
@@ -68,38 +65,46 @@ class _RegistroScreenState extends State<RegistroScreen> {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
       try {
-        // 1. Subir la foto a Supabase (si el usuario seleccionó una)
+        // 1. Subir la foto a Supabase (si seleccionó una)
         String? linkFoto;
         if (_imagenBytes != null) {
-          // Usamos el carnet como nombre del archivo (ej. "2024001.jpg")
-          linkFoto = await _subirFotoSupabase(_carnetController.text.trim());
+          // Generamos un nombre único basado en la fecha/hora actual
+          // Así evitamos errores si la cédula/carnet está vacía
+          final String nombreUnico = DateTime.now().millisecondsSinceEpoch.toString();
+          linkFoto = await _subirFotoSupabase(nombreUnico);
         }
 
-        // 2. Registrar en Firebase a través de tu AuthService
+        // 2. Registrar en Firebase a través del AuthService
         await _authService.registrarUsuario(
           nombre: _nombreController.text.trim(),
           apellido: _apellidoController.text.trim(), 
-          carnet: _carnetController.text.trim(),
+          cedula: _cedulaController.text.trim(), // Puede ir vacío sin problema
           email: _correoController.text.trim(),
           password: _passwordController.text.trim(),
-          fotoUrl: linkFoto ?? '', // <--- ¡Añadimos este nuevo parámetro!
+          fotoUrl: linkFoto ?? '', 
         );
 
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('¡Registro Exitoso! Ahora inicia sesión'), backgroundColor: Colors.green),
         );
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const LoginScreen()));
+        // Usamos rutas nombradas para mantener la coherencia con el diagrama
+        Navigator.pushReplacementNamed(context, '/login'); 
+        
       } catch (e) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.red),
         );
       } finally {
-        setState(() => _isLoading = false);
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
       }
     }
   }
 
-  // Función auxiliar para dibujar las casillas de texto elegantemente
+  // Función auxiliar para las casillas de texto
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
@@ -111,7 +116,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
   }) {
     return Container(
       decoration: BoxDecoration(
-        boxShadow: [
+        boxShadow:[
           BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
         ],
       ),
@@ -153,7 +158,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.95),
                 borderRadius: BorderRadius.circular(24),
-                boxShadow: [
+                boxShadow:[
                   BoxShadow(
                     color: Colors.black.withOpacity(0.15),
                     blurRadius: 20,
@@ -166,7 +171,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
+                  children:[
                     const Text(
                       'Crea tu cuenta',
                       style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.orange),
@@ -174,17 +179,15 @@ class _RegistroScreenState extends State<RegistroScreen> {
                     ),
                     const SizedBox(height: 30),
                     
-                    // ---> INICIO DEL CÓDIGO DE LA FOTO DE PERFIL <---
+                    // --- FOTO DE PERFIL ---
                     GestureDetector(
-                      onTap: _seleccionarFoto, // Llama a tu función al hacer clic
+                      onTap: _seleccionarFoto, 
                       child: CircleAvatar(
-                        radius: 50, // Tamaño del círculo
+                        radius: 50, 
                         backgroundColor: Colors.orange.withOpacity(0.1),
-                        // Si hay bytes en memoria, muestra la imagen, si no, es nulo
                         backgroundImage: _imagenBytes != null 
                             ? MemoryImage(_imagenBytes!) 
                             : null,
-                        // Si no hay imagen, muestra un ícono de cámara por defecto
                         child: _imagenBytes == null
                             ? const Icon(Icons.add_a_photo, size: 40, color: Colors.orange)
                             : null,
@@ -197,7 +200,6 @@ class _RegistroScreenState extends State<RegistroScreen> {
                       style: TextStyle(color: Colors.grey, fontSize: 12),
                     ),
                     const SizedBox(height: 20),
-                    // ---> FIN DEL CÓDIGO DE LA FOTO DE PERFIL <---
 
                     // Nombre
                     _buildTextField(
@@ -217,13 +219,13 @@ class _RegistroScreenState extends State<RegistroScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Carnet
+                    // Cédula o Carnet (OPCIONAL)
                     _buildTextField(
-                      controller: _carnetController,
-                      label: 'Carnet (ej. 2024001)',
+                      controller: _cedulaController,
+                      label: 'Cédula (Opcional)',
                       icon: Icons.badge_outlined,
                       type: TextInputType.number,
-                      validator: (value) => value!.isEmpty ? 'Ingresa tu número de carnet' : null,
+                      validator: (value) => null, 
                     ),
                     const SizedBox(height: 20),
 
@@ -259,7 +261,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
                       ? const Center(child: CircularProgressIndicator(color: Colors.orange))
                       : Container(
                           decoration: BoxDecoration(
-                            boxShadow: [
+                            boxShadow:[
                               BoxShadow(color: Colors.orange.withOpacity(0.4), blurRadius: 12, offset: const Offset(0, 6))
                             ]
                           ),
@@ -274,6 +276,13 @@ class _RegistroScreenState extends State<RegistroScreen> {
                               child: const Text('REGISTRARME', style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold)),
                             ),
                         ),
+                    const SizedBox(height: 20),
+
+                    // Botón de regreso al Login (por si el usuario ya tiene cuenta)
+                    TextButton(
+                      onPressed: () => Navigator.pushReplacementNamed(context, '/login'),
+                      child: Text('¿Ya tienes cuenta? Inicia sesión aquí', style: TextStyle(color: Colors.grey[800], fontWeight: FontWeight.bold)),
+                    ),
                   ],
                 ),
               ),

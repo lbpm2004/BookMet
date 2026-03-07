@@ -18,7 +18,7 @@ class AuthService {
   Future<void> registrarUsuario({
     required String nombre,
     required String apellido,
-    required String carnet,
+    required String cedula,
     required String email,
     required String password,
     required String fotoUrl,
@@ -30,14 +30,21 @@ class AuthService {
         password: password,
       );
 
+      // 2. Lógica dinámica para asignar el ROL
+      // Si termina en @unimet.edu.ve es DOCENTE, de lo contrario es ESTUDIANTE
+      String rolAsignado = email.endsWith('@unimet.edu.ve') ? 'DOCENTE' : 'ESTUDIANTE';
+
+
       // 2. Guardar los datos en Firestore (Base de Datos)
       await _firestore.collection('usuarios').doc(userCredential.user!.uid).set({
         'uid': userCredential.user!.uid,
         'nombre': nombre,
         'apellido': apellido, 
-        'carnet': carnet,
+        'cedula': cedula,
         'email': email,
         'fotoPerfil': fotoUrl,
+        'estaActivo': true,
+        'rol': rolAsignado,
       });
       
     } catch (e) {
@@ -51,11 +58,12 @@ class AuthService {
   }
 
   //Recuperar contraseña
-  Future<void> recuperarPassword(String email) async {
+  Future<void> recuperarPassword(String correo) async {
     try {
-      await _auth.sendPasswordResetEmail(email: email);
+      await _auth.sendPasswordResetEmail(email: correo);
     } catch (e) {
-      throw Exception('Error al enviar correo de recuperación: $e');
+      //throw Exception('Error al enviar correo de recuperación: $e');
+      rethrow;
     }
   }
 }

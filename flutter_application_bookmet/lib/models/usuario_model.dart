@@ -1,14 +1,19 @@
 class UsuarioModel {
   final String id;
   final String nombre;
-  final String carnet;
+  final String cedula;
   final String email;
+  final String fotoUrl;
+  final String rol;
 
   UsuarioModel({
     required this.id,
     required this.nombre,
-    required this.carnet,
+    required this.cedula,
     required this.email,
+    required this.fotoUrl,
+    required this.rol
+
   });
 
   // Esto sirve para convertir los datos y guardarlos en la base de datos
@@ -16,8 +21,10 @@ class UsuarioModel {
     return {
       'id': id,
       'nombre': nombre,
-      'carnet': carnet,
+      'cedula': cedula,
       'email': email,
+      'fotoUrl': fotoUrl,
+      'rol': rol
     };
   }
 }

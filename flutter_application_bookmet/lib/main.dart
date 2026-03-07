@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'firebase_options.dart';
-import 'package:flutter_application_bookmet/screens/home_screen.dart';
+import 'package:flutter_application_bookmet/screens/bienvenida_screen.dart';
 import 'package:flutter_application_bookmet/screens/acerca_de_screen.dart'; 
 import 'package:flutter_application_bookmet/screens/registro_screen.dart'; 
-import 'screens/login_screen.dart'; 
+import 'package:flutter_application_bookmet/screens/login_screen.dart'; 
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,7 +35,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(primaryColor: Colors.orange), // El naranja Unimet
       initialRoute: '/', // La ruta inicial
     routes: {
-      '/': (context) => const HomeScreen(), // Define la pantalla de inicio
+      '/': (context) => const BienvenidaScreen(), // Define la pantalla de inicio
       '/acerca_de': (context) => const AcercaDeScreen(), // pantalla con información sobre nosotros
       '/login': (context) => const LoginScreen(), // pantalla de login
       '/registro': (context) => const RegistroScreen(), // pantalla de registro

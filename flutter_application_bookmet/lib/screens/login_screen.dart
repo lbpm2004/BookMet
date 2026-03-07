@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 import '../widgets/fondo_con_blur.dart';
-import 'registro_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -26,10 +25,11 @@ class _LoginScreenState extends State<LoginScreen> {
           _correoController.text.trim(),
           _passwordController.text.trim(),
         );
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('¡Bienvenido de nuevo! 📚'), backgroundColor: Colors.green),
         );
-        Navigator.pushReplacementNamed(context, '/'); // Descomentar cuando tengamos el Home
+        Navigator.pushReplacementNamed(context, '/usuario'); // Ruta centralizada según tu diagrama
         
       } on FirebaseAuthException catch (e) {
         String mensajeError = 'Ocurrió un error inesperado';
@@ -38,11 +38,14 @@ class _LoginScreenState extends State<LoginScreen> {
         } else if (e.code == 'invalid-email') {
           mensajeError = 'El formato del correo no es válido.';
         }
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(mensajeError), backgroundColor: Colors.red),
         );
       } finally {
-        setState(() => _isLoading = false);
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
       }
     }
   }
@@ -58,7 +61,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }) {
     return Container(
       decoration: BoxDecoration(
-        boxShadow: [
+        boxShadow:[
           BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
         ],
       ),
@@ -94,13 +97,12 @@ class _LoginScreenState extends State<LoginScreen> {
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24.0),
             child: Container(
-              // --- AQUÍ ESTÁ EL TAMAÑO PERFECTO IGUAL AL REGISTRO ---
               constraints: const BoxConstraints(maxWidth: 450), 
               padding: const EdgeInsets.all(32.0),
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.95), 
                 borderRadius: BorderRadius.circular(24),
-                boxShadow: [
+                boxShadow:[
                   BoxShadow(
                     color: Colors.black.withOpacity(0.15), 
                     blurRadius: 20,
@@ -113,25 +115,17 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min, 
                   crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
+                  children:[
                     const Text(
                       'BookMet',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 38, 
-                        fontWeight: FontWeight.bold, 
-                        color: Colors.orange, 
-                      ),
+                      style: TextStyle(fontSize: 38, fontWeight: FontWeight.bold, color: Colors.orange),
                     ),
                     const SizedBox(height: 10), 
                     Text(
                       'Inicia sesión para continuar',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.grey[800], 
-                        fontSize: 16, 
-                        fontWeight: FontWeight.w500
-                      ),
+                      style: TextStyle(color: Colors.grey[800], fontSize: 16, fontWeight: FontWeight.w500),
                     ),
                     const SizedBox(height: 35),
 
@@ -160,7 +154,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ? const Center(child: CircularProgressIndicator(color: Colors.orange))
                         : Container(
                             decoration: BoxDecoration(
-                              boxShadow: [
+                              boxShadow:[
                                 BoxShadow(color: Colors.orange.withOpacity(0.4), blurRadius: 12, offset: const Offset(0, 6))
                               ]
                             ),
@@ -177,34 +171,53 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                     const SizedBox(height: 20),
 
-                    // Botón Registro
+                    // Botón Registro (Actualizado para usar rutas nombradas y color unificado)
                     TextButton(
-                      onPressed: () {
-                        Navigator.push(context, MaterialPageRoute(builder: (context) => const RegistroScreen()));
-                      },
+                      onPressed: () => Navigator.pushNamed(context, '/registro'),
                       child: Text('¿No tienes cuenta? Regístrate aquí', style: TextStyle(color: Colors.grey[800], fontWeight: FontWeight.bold)),
                     ),
 
-                    //Boton Recuperacion de contraseña
+                    // Botón Recuperación de contraseña (Actualizado color y lógica)
                     TextButton(
                        onPressed: () async {
-                        if (_correoController.text.isEmpty) {
+                        final correo = _correoController.text.trim();
+                        if (correo.isEmpty) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Por favor, ingresa tu correo para recuperar tu contraseña')));
+                            const SnackBar(content: Text('Por favor, escribe tu correo arriba para enviar el enlace.'), backgroundColor: Colors.orange));
                             return;
                         }
+                        
+                        // Expresión regular para validar formato de correo básico
+                        final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                        if (!emailRegex.hasMatch(correo)) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Por favor, ingresa un formato de correo válido.'), backgroundColor: Colors.red));
+                            return;
+                        }
+
                         try {
-                          await _authService.recuperarPassword(_correoController.text.trim());
+                          await _authService.recuperarPassword(correo);
+                          if (!mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Correo de recuperación enviado 📧'))
+                            const SnackBar(content: Text('Correo de recuperación enviado 📧. Revisa tu bandeja/spam.'), backgroundColor: Colors.green)
                           );
-                        } catch (e) {
+                        } on FirebaseAuthException catch (e) {
+                          String errorMsg = 'Error al enviar el correo';
+                          if (e.code == 'user-not-found') {
+                            errorMsg = 'No hay ninguna cuenta registrada con este correo.';
+                          }
+                          if (!mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Error al enviar correo de recuperación de contraseña')));
+                            SnackBar(content: Text(errorMsg), backgroundColor: Colors.red));
+                        } catch (e) {
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Error inesperado al intentar recuperar la contraseña.'), backgroundColor: Colors.red));
                         }
                        },
-                       child: const Text('¿Olvidaste tu contraseña? Recuperar contraseña.', style: TextStyle(color: Colors.orange))
-                       ),
+                       // AQUI ESTÁ EL CAMBIO DE COLOR:
+                       child: Text('¿Olvidaste tu contraseña? Recupérala aquí', style: TextStyle(color: Colors.grey[800], fontWeight: FontWeight.bold))
+                    ),
                   ],
                 ),
               ),
