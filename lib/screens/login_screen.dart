@@ -4,7 +4,7 @@ import '../services/auth_service.dart';
 import '../widgets/fondo_con_blur.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({Key? key}) : super(key: key);
 
   @override
   _LoginScreenState createState() => _LoginScreenState();
@@ -26,26 +26,21 @@ class _LoginScreenState extends State<LoginScreen> {
           _passwordController.text.trim(),
         );
         if (!mounted) return;
-        
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('¡Bienvenido de nuevo! 📚'), backgroundColor: Colors.green),
         );
-        Navigator.pushReplacementNamed(context, '/usuario'); // Ruta centralizada
+        Navigator.pushReplacementNamed(context, '/usuario'); // Ruta centralizada según tu diagrama
         
-      } catch (e) {
-        // AQUÍ ESTÁ EL CAMBIO: Atrapamos el error de auth_service y lo limpiamos
-        String mensajeError = e.toString().replaceAll('Exception: ', '');
-        
+      } on FirebaseAuthException catch (e) {
+        String mensajeError = 'Ocurrió un error inesperado';
+        if (e.code == 'user-not-found' || e.code == 'invalid-credential') {
+          mensajeError = 'Correo o contraseña incorrectos.';
+        } else if (e.code == 'invalid-email') {
+          mensajeError = 'El formato del correo no es válido.';
+        }
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              mensajeError, 
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-            ),
-            backgroundColor: Colors.red[800], // Un rojo elegante para los errores
-            duration: const Duration(seconds: 4),
-          ),
+          SnackBar(content: Text(mensajeError), backgroundColor: Colors.red),
         );
       } finally {
         if (mounted) {
@@ -66,7 +61,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }) {
     return Container(
       decoration: BoxDecoration(
-        boxShadow: [
+        boxShadow:[
           BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
         ],
       ),
@@ -107,7 +102,7 @@ class _LoginScreenState extends State<LoginScreen> {
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.95), 
                 borderRadius: BorderRadius.circular(24),
-                boxShadow: [
+                boxShadow:[
                   BoxShadow(
                     color: Colors.black.withOpacity(0.15), 
                     blurRadius: 20,
@@ -120,7 +115,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min, 
                   crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
+                  children:[
                     const Text(
                       'BookMet',
                       textAlign: TextAlign.center,
@@ -159,7 +154,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ? const Center(child: CircularProgressIndicator(color: Colors.orange))
                         : Container(
                             decoration: BoxDecoration(
-                              boxShadow: [
+                              boxShadow:[
                                 BoxShadow(color: Colors.orange.withOpacity(0.4), blurRadius: 12, offset: const Offset(0, 6))
                               ]
                             ),
@@ -176,13 +171,13 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                     const SizedBox(height: 20),
 
-                    // Botón Registro 
+                    // Botón Registro (Actualizado para usar rutas nombradas y color unificado)
                     TextButton(
                       onPressed: () => Navigator.pushNamed(context, '/registro'),
                       child: Text('¿No tienes cuenta? Regístrate aquí', style: TextStyle(color: Colors.grey[800], fontWeight: FontWeight.bold)),
                     ),
 
-                    // Botón Recuperación de contraseña 
+                    // Botón Recuperación de contraseña (Actualizado color y lógica)
                     TextButton(
                        onPressed: () async {
                         final correo = _correoController.text.trim();
@@ -220,6 +215,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             const SnackBar(content: Text('Error inesperado al intentar recuperar la contraseña.'), backgroundColor: Colors.red));
                         }
                        },
+                       // AQUI ESTÁ EL CAMBIO DE COLOR:
                        child: Text('¿Olvidaste tu contraseña? Recupérala aquí', style: TextStyle(color: Colors.grey[800], fontWeight: FontWeight.bold))
                     ),
                   ],

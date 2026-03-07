@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class BienvenidaScreen extends StatelessWidget {
-  const BienvenidaScreen({super.key});
+  const BienvenidaScreen({Key? key}) : super(key: key);
 
   // Definimos los colores del diseño
   final Color kPrimaryOrange = const Color(0xFFFF8200); 
