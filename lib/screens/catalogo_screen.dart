@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'publicacion_screen.dart';
 
 class CatalogoScreen extends StatefulWidget {
   const CatalogoScreen({Key? key}) : super(key: key);
@@ -130,7 +131,7 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
             ),
             itemCount: 12, // Libros de ejemplo
             itemBuilder: (context, index) {
-              return _buildLibroGridCard(index);
+              return _buildLibroGridCard(context, index);
             },
           ),
         ),
@@ -164,55 +165,65 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
     );
   }
 
-  // Tarjeta miniatura para el grid de 4 columnas
-  Widget _buildLibroGridCard(int index) {
+  // Tarjeta miniatura para el grid de 4 columnas (AHORA RECIBE EL CONTEXT)
+  Widget _buildLibroGridCard(BuildContext context, int index) {
     bool disponible = index % 3 != 0; // Simulamos que algunos están reservados
 
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Imagen del libro 
-          Expanded(
-            flex: 3,
-            child: Container(
-              width: double.infinity,
-              color: disponible ? Colors.orange[100] : Colors.grey[300], // Gris si está reservado
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Icon(Icons.menu_book, size: 30, color: disponible ? Colors.orange : Colors.grey),
-                  if (!disponible)
-                    Container(
-                      color: Colors.black54,
-                      width: double.infinity,
-                      child: const Text('RESERVADO', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                    )
-                ],
+    // Envolvemos el Card en un GestureDetector para que sea "clickeable"
+    return GestureDetector(
+      onTap: () {
+        // Lógica de navegación hacia la pantalla de la publicación
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => PublicacionScreen()),
+        );
+      },
+      child: Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Imagen del libro 
+            Expanded(
+              flex: 3,
+              child: Container(
+                width: double.infinity,
+                color: disponible ? Colors.orange[100] : Colors.grey[300], 
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Icon(Icons.menu_book, size: 30, color: disponible ? Colors.orange : Colors.grey),
+                    if (!disponible)
+                      Container(
+                        color: Colors.black54,
+                        width: double.infinity,
+                        child: const Text('RESERVADO', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                      )
+                  ],
+                ),
               ),
             ),
-          ),
-          // Detalles compactos
-          Expanded(
-            flex: 2,
-            child: Padding(
-              padding: const EdgeInsets.all(6.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Libro $index', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis),
-                  const SizedBox(height: 2),
-                  Text('Ing. Sistemas', style: TextStyle(color: Colors.grey[600], fontSize: 9), maxLines: 1, overflow: TextOverflow.ellipsis),
-                  const Spacer(),
-                  Text(index.isEven ? 'Donación' : 'Intercambio', style: TextStyle(color: index.isEven ? Colors.green : Colors.blue, fontSize: 9, fontWeight: FontWeight.bold)),
-                ],
+            // Detalles compactos
+            Expanded(
+              flex: 2,
+              child: Padding(
+                padding: const EdgeInsets.all(6.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Libro $index', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis),
+                    const SizedBox(height: 2),
+                    Text('Ing. Sistemas', style: TextStyle(color: Colors.grey[600], fontSize: 9), maxLines: 1, overflow: TextOverflow.ellipsis),
+                    const Spacer(),
+                    Text(index.isEven ? 'Donación' : 'Intercambio', style: TextStyle(color: index.isEven ? Colors.green : Colors.blue, fontSize: 9, fontWeight: FontWeight.bold)),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
