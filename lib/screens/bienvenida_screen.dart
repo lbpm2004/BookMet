@@ -103,7 +103,7 @@ class BienvenidaScreen extends StatelessWidget {
             ),
             const SizedBox(width: 20),
             ElevatedButton(
-              onPressed: () => Navigator.pushNamed(context, '/registro'),
+              onPressed: () => Navigator.pushNamed(context, '/registro'),            
               style: ElevatedButton.styleFrom(
                 backgroundColor: kDarkBlue, // Cambiado al mismo color que Iniciar Sesión
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),

@@ -29,7 +29,12 @@ class _LoginScreenState extends State<LoginScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('¡Bienvenido de nuevo! 📚'), backgroundColor: Colors.green),
         );
-        Navigator.pushReplacementNamed(context, '/usuario'); // Ruta centralizada según tu diagrama
+        
+        Navigator.pushNamedAndRemoveUntil(
+          context, 
+          '/usuario', 
+          (Route<dynamic> route) => false, 
+        );
         
       } on FirebaseAuthException catch (e) {
         String mensajeError = 'Ocurrió un error inesperado';
