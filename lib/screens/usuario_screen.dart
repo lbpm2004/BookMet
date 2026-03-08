@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; 
 import '../services/auth_service.dart';
 import 'catalogo_screen.dart'; 
+import 'mis_solicitudes_screen.dart';
 import 'publicar_screen.dart';
 import 'mis_publicaciones_screen.dart'; 
 
@@ -33,15 +34,102 @@ class _UsuarioScreenState extends State<UsuarioScreen> {
     Navigator.pushReplacementNamed(context, '/login'); 
   }
 
-  // Decide qué "cuerpo" mostrar según el botón de abajo que esté activo
+  // --- NUEVA VISTA DE INICIO (Index 0) ---
+  Widget _construirVistaInicio() {
+    return Column(
+      children: [
+        // 1. Barra de Búsqueda
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: TextField(
+            decoration: InputDecoration(
+              hintText: '¿Buscas un libro en concreto? Empieza buscando aquí',
+              hintStyle: const TextStyle(fontSize: 14),
+              prefixIcon: const Icon(Icons.search, color: Colors.orange),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(30),
+                borderSide: BorderSide.none,
+              ),
+              filled: true,
+              fillColor: Colors.grey[200],
+            ),
+            onSubmitted: (value) {
+              // Aquí en el futuro puedes hacer que al buscar lo mande al Catálogo con el filtro
+            },
+          ),
+        ),
+        
+        // 2. Título de la sección
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'Últimas publicaciones',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ),
+
+        // 3. Lista de los últimos 15 libros
+        Expanded(
+          child: StreamBuilder<QuerySnapshot>(
+            // Consulta a Firestore: Trae 15 documentos de la colección 'publicaciones'
+            // (Si tienes un campo de fecha de creación, podrías agregar .orderBy('fecha', descending: true) antes del limit)
+            stream: FirebaseFirestore.instance.collection('publicaciones').limit(15).snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator(color: Colors.orange));
+              }
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                return const Center(child: Text('Aún no hay publicaciones en la app.'));
+              }
+
+              // Construimos la lista con las tarjetas de los libros
+              return ListView.builder(
+                itemCount: snapshot.data!.docs.length,
+                itemBuilder: (context, index) {
+                  var publicacion = snapshot.data!.docs[index].data() as Map<String, dynamic>;
+                  
+                  // NOTA: Ajusta 'titulo' y 'autor' si tus campos en Firebase se llaman distinto
+                  String titulo = publicacion['titulo'] ?? 'Sin título';
+                  String autor = publicacion['autor'] ?? 'Autor desconocido';
+
+                  return Card(
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    elevation: 2,
+                    child: ListTile(
+                      leading: const CircleAvatar(
+                        backgroundColor: Colors.orangeAccent,
+                        child: Icon(Icons.book, color: Colors.white),
+                      ),
+                      title: Text(titulo, style: const TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: Text(autor),
+                      trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Decide qué "cuerpo" mostrar según el botón
   Widget _obtenerCuerpoPantalla() {
     switch (_indiceSeleccionado) {
       case 0:
-        return const CatalogoScreen(); 
+        return _construirVistaInicio(); // Tu nueva pantalla de bienvenida interactiva
       case 1:
+        return const CatalogoScreen(); 
+      case 2:
         return const PublicarScreen();
+      case 3:
+        return const MisSolicitudesScreen(); 
       default:
-        return const CatalogoScreen();
+        return _construirVistaInicio();
     }
   }
 
@@ -55,12 +143,11 @@ class _UsuarioScreenState extends State<UsuarioScreen> {
         elevation: 1,
       ),
       
-      // --- MENÚ LATERAL (DRAWER) INTEGRADO ---
+      // --- MENÚ LATERAL (DRAWER) ---
       drawer: Drawer(
         child: user == null
             ? const Center(child: Text('No hay usuario activo'))
             : FutureBuilder<DocumentSnapshot>(
-                // Buscamos los datos del usuario actual en Firestore
                 future: FirebaseFirestore.instance.collection('usuarios').doc(user!.uid).get(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
@@ -70,7 +157,6 @@ class _UsuarioScreenState extends State<UsuarioScreen> {
                     return const Center(child: Text('Error al cargar datos del perfil'));
                   }
 
-                  // Extraemos los datos de la base de datos
                   var userData = snapshot.data!.data() as Map<String, dynamic>;
                   String nombre = userData['nombre'] ?? 'Usuario';
                   String apellido = userData['apellido'] ?? '';
@@ -81,11 +167,8 @@ class _UsuarioScreenState extends State<UsuarioScreen> {
                   return ListView(
                     padding: EdgeInsets.zero,
                     children: [
-                      // --- CABECERA DEL MENÚ MEJORADA ---
                       UserAccountsDrawerHeader(
                         decoration: BoxDecoration(color: Colors.orange[800]),
-                        
-                        // DISEÑO NUEVO: Nombre y Rol en la misma línea
                         accountName: Row(
                           children: [
                             Flexible(
@@ -95,9 +178,7 @@ class _UsuarioScreenState extends State<UsuarioScreen> {
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
-                            const SizedBox(width: 10), // Espacio entre nombre y rol
-                            
-                            // La nueva "Píldora" elegante para el Rol
+                            const SizedBox(width: 10),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
@@ -107,46 +188,34 @@ class _UsuarioScreenState extends State<UsuarioScreen> {
                               ),
                               child: Text(
                                 rol, 
-                                style: const TextStyle(
-                                  color: Colors.white, 
-                                  fontSize: 10, 
-                                  fontWeight: FontWeight.bold, 
-                                  letterSpacing: 0.5
-                                ),
+                                style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5),
                               ),
                             ),
                           ],
                         ),
                         accountEmail: Text(email),
-                        
-                        // Foto de perfil
                         currentAccountPicture: CircleAvatar(
                           backgroundColor: Colors.white,
                           backgroundImage: fotoUrl.isNotEmpty ? NetworkImage(fotoUrl) : null,
                           child: fotoUrl.isEmpty ? Icon(Icons.person, size: 40, color: Colors.orange[300]) : null,
                         ),
                       ),
-                      
-                      // --- OPCIONES DEL MENÚ LATERAL ---
                       ListTile(
                         leading: const Icon(Icons.book, color: Colors.orange),
                         title: const Text('Mis Publicaciones'),
                         onTap: () {
-                          // 1. Cerramos el menú lateral
                           Navigator.pop(context); 
-                          // 2. Navegamos a la pantalla de Mis Publicaciones
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => const MisPublicacionesScreen()),
-                          );
+                          Navigator.push(context, MaterialPageRoute(builder: (context) => const MisPublicacionesScreen()));
                         },
                       ),
                       ListTile(
                         leading: const Icon(Icons.handshake, color: Colors.orange),
                         title: const Text('Intercambios y Solicitudes'),
                         onTap: () {
-                          // Aquí conectaremos la pantalla de transacciones en el futuro
                           Navigator.pop(context);
+                          setState(() {
+                            _indiceSeleccionado = 3; 
+                          });
                         },
                       ),
                       const Divider(),
@@ -169,7 +238,6 @@ class _UsuarioScreenState extends State<UsuarioScreen> {
               ),
       ),
       
-      // --- CUERPO Y BARRA INFERIOR ---
       body: _obtenerCuerpoPantalla(),
       
       bottomNavigationBar: BottomNavigationBar(
@@ -179,14 +247,23 @@ class _UsuarioScreenState extends State<UsuarioScreen> {
         unselectedItemColor: Colors.grey,
         backgroundColor: Colors.white,
         elevation: 8,
+        type: BottomNavigationBarType.fixed, 
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home),
+            label: 'Inicio',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.menu_book),
             label: 'Catálogo',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.add_circle_outline),
             label: 'Publicar',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.list_alt), 
+            label: 'Solicitudes',
           ),
         ],
       ),
