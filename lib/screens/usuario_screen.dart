@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; 
 import '../services/auth_service.dart';
-import 'catalogo_screen.dart'; // Importamos el catálogo que acabamos de crear
+import 'catalogo_screen.dart'; 
+import 'publicar_screen.dart';
 
 class UsuarioScreen extends StatefulWidget {
   const UsuarioScreen({Key? key}) : super(key: key);
@@ -39,7 +40,7 @@ class _UsuarioScreenState extends State<UsuarioScreen> {
       case 1:
         return const CatalogoScreen(); // El catálogo de 4 columnas y 5 filtros
       case 2:
-        return const Center(child: Text('Pantalla de Publicar (En construcción)'));
+        return const PublicarScreen();
       case 3:
         return const Center(child: Text('Mis Solicitudes (En construcción)'));
       default:

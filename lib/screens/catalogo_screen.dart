@@ -131,7 +131,7 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
             ),
             itemCount: 12, // Libros de ejemplo
             itemBuilder: (context, index) {
-              return _buildLibroGridCard(context, index);
+              return LibroGridCardInteractiva(index: index); // Usamos el nuevo widget
             },
           ),
         ),
@@ -164,65 +164,89 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
       ),
     );
   }
+}
 
-  // Tarjeta miniatura para el grid de 4 columnas (AHORA RECIBE EL CONTEXT)
-  Widget _buildLibroGridCard(BuildContext context, int index) {
-    bool disponible = index % 3 != 0; // Simulamos que algunos están reservados
+// Nuevo Widget interactivo para cada libro del Grid
+class LibroGridCardInteractiva extends StatefulWidget {
+  final int index;
+  const LibroGridCardInteractiva({Key? key, required this.index}) : super(key: key);
 
-    // Envolvemos el Card en un GestureDetector para que sea "clickeable"
-    return GestureDetector(
-      onTap: () {
-        // Lógica de navegación hacia la pantalla de la publicación
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => PublicacionScreen()),
-        );
-      },
-      child: Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Imagen del libro 
-            Expanded(
-              flex: 3,
-              child: Container(
-                width: double.infinity,
-                color: disponible ? Colors.orange[100] : Colors.grey[300], 
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Icon(Icons.menu_book, size: 30, color: disponible ? Colors.orange : Colors.grey),
-                    if (!disponible)
-                      Container(
-                        color: Colors.black54,
-                        width: double.infinity,
-                        child: const Text('RESERVADO', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                      )
-                  ],
+  @override
+  _LibroGridCardInteractivaState createState() => _LibroGridCardInteractivaState();
+}
+
+class _LibroGridCardInteractivaState extends State<LibroGridCardInteractiva> {
+  bool _isHovered = false; // Controla si el ratón está encima
+
+  @override
+  Widget build(BuildContext context) {
+    bool disponible = widget.index % 3 != 0; 
+
+    // MouseRegion detecta el ratón y cambia el cursor a la "manito"
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: GestureDetector(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => PublicacionScreen()), 
+          );
+        },
+        // AnimatedScale hace que la tarjeta crezca un 3% cuando _isHovered es true
+        child: AnimatedScale(
+          scale: _isHovered ? 1.03 : 1.0, 
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeInOut,
+          child: Card(
+            elevation: _isHovered ? 8 : 2, // La sombra también crece
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: Container(
+                    width: double.infinity,
+                    color: disponible ? Colors.orange[100] : Colors.grey[300], 
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Icon(Icons.menu_book, size: 30, color: disponible ? Colors.orange : Colors.grey),
+                        if (!disponible)
+                          Container(
+                            color: Colors.black54,
+                            width: double.infinity,
+                            child: const Text('RESERVADO', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                          )
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            // Detalles compactos
-            Expanded(
-              flex: 2,
-              child: Padding(
-                padding: const EdgeInsets.all(6.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Libro $index', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis),
-                    const SizedBox(height: 2),
-                    Text('Ing. Sistemas', style: TextStyle(color: Colors.grey[600], fontSize: 9), maxLines: 1, overflow: TextOverflow.ellipsis),
-                    const Spacer(),
-                    Text(index.isEven ? 'Donación' : 'Intercambio', style: TextStyle(color: index.isEven ? Colors.green : Colors.blue, fontSize: 9, fontWeight: FontWeight.bold)),
-                  ],
+                Expanded(
+                  flex: 2,
+                  child: Padding(
+                    padding: const EdgeInsets.all(6.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Libro ${widget.index}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis),
+                        const SizedBox(height: 2),
+                        Text('Ing. Sistemas', style: TextStyle(color: Colors.grey[600], fontSize: 9), maxLines: 1, overflow: TextOverflow.ellipsis),
+                        const Spacer(),
+                        Text(
+                          disponible ? 'Disponible' : 'No Disponible', 
+                          style: TextStyle(color: disponible ? Colors.green : Colors.red, fontSize: 9, fontWeight: FontWeight.bold)
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
