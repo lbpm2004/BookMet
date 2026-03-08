@@ -6,7 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/fondo_con_blur.dart'; 
 
 class RegistroScreen extends StatefulWidget {
-  const RegistroScreen({Key? key}) : super(key: key);
+  const RegistroScreen({super.key});
 
   @override
   _RegistroScreenState createState() => _RegistroScreenState();

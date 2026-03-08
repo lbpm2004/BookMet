@@ -1,239 +1,291 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-class PublicacionScreen extends StatelessWidget {
-  final String titulo = 'Cálculo de una variable: Trascendentes tempranas';
-  final String autor = 'James Stewart';
-  final String descripcion = 'Libro en muy buen estado. Tiene algunas notas a lápiz en los primeros capítulos, pero nada que impida la lectura. Ideal para los primeros trimestres.';
-  final String estadoLibro = 'Usado - Buen estado';
-  
-  final List<String> carreras = ['Ing. Sistemas', 'Ing. Civil', 'Ciencias Básicas'];
-  final List<String> materias = ['Matemáticas I', 'Cálculo I'];
-  
-  final List<String> imagenesUrls = [
-    'https://via.placeholder.com/600x900.png?text=Portada',
-    'https://via.placeholder.com/600x900.png?text=Contraportada'
+class PublicarScreen extends StatefulWidget {
+  const PublicarScreen({Key? key}) : super(key: key);
+
+  @override
+  _PublicarScreenState createState() => _PublicarScreenState();
+}
+
+class _PublicarScreenState extends State<PublicarScreen> {
+  final _formKey = GlobalKey<FormState>();
+
+  final TextEditingController _tituloController = TextEditingController();
+  final TextEditingController _autorController = TextEditingController();
+  final TextEditingController _descripcionController = TextEditingController();
+  final TextEditingController _carrerasController = TextEditingController();
+  final TextEditingController _materiasController = TextEditingController();
+
+  String? _estadoFisicoSeleccionado;
+  final List<String> _opcionesEstado = [
+    'Nuevo',
+    'Como nuevo',
+    'Buen estado',
+    'Deteriorado'
   ];
 
-  PublicacionScreen({Key? key}) : super(key: key);
+  // Simuladores de imágenes (Pronto los haremos reales con Supabase)
+  bool _tienePortada = false;
+  bool _tieneContraportada = false;
+  
+  // Variable para mostrar un circulito de carga mientras se guarda en Firebase
+  bool _estaPublicando = false;
+
+  Future<void> _enviarPublicacion() async {
+    // 1. Validamos que el formulario esté lleno
+    if (_formKey.currentState!.validate()) {
+      if (!_tienePortada || !_tieneContraportada) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Por favor, simula subir la portada y contraportada.'), backgroundColor: Colors.red),
+        );
+        return;
+      }
+
+      setState(() {
+        _estaPublicando = true; // Empezamos a cargar
+      });
+
+      try {
+        // 2. Obtenemos quién es el usuario que está publicando
+        final String? userId = FirebaseAuth.instance.currentUser?.uid;
+        
+        if (userId == null) throw Exception("No hay usuario logueado");
+
+        // 3. ¡AQUÍ ESTÁ LA MAGIA! Guardamos los datos reales en Firestore
+        await FirebaseFirestore.instance.collection('publicaciones').add({
+          'usuarioId': userId,
+          'titulo': _tituloController.text.trim(),
+          'autor': _autorController.text.trim(),
+          'descripcion': _descripcionController.text.trim(),
+          'carreras': _carrerasController.text.trim(),
+          'materias': _materiasController.text.trim(),
+          'condicionFisica': _estadoFisicoSeleccionado,
+          'estado': 'DISPONIBLE', // Lo ponemos disponible de una vez para que lo veas
+          'fechaCreacion': FieldValue.serverTimestamp(), // La hora exacta del servidor
+          'portadaUrl': '', // Por ahora vacío, luego conectamos Supabase
+          'contraportadaUrl': '',
+        });
+
+        if (!mounted) return;
+
+        // 4. Mostramos mensaje de éxito
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('¡Libro publicado con éxito! 📚'), backgroundColor: Colors.green),
+        );
+
+        // 5. Limpiamos el formulario para que quede vacío de nuevo
+        _tituloController.clear();
+        _autorController.clear();
+        _descripcionController.clear();
+        _carrerasController.clear();
+        _materiasController.clear();
+        setState(() {
+          _estadoFisicoSeleccionado = null;
+          _tienePortada = false;
+          _tieneContraportada = false;
+        });
+
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al publicar: $e'), backgroundColor: Colors.red),
+        );
+      } finally {
+        setState(() {
+          _estaPublicando = false; // Apagamos el circulito de carga
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 1,
-        iconTheme: const IconThemeData(color: Colors.orange),
-        title: const Text('Detalles del Libro', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
-      ),
-      
-      // EL CEREBRO RESPONSIVO
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          // Si el ancho es mayor a 800px, mostramos el diseño de PC
-          if (constraints.maxWidth > 800) {
-            return _buildVistaEscritorio(context);
-          } 
-          // Si es menor, mostramos el diseño de Móvil
-          else {
-            return _buildVistaMovil(context);
-          }
-        },
-      ),
-    );
-  }
-
-  // ==========================================
-  // 1. DISEÑO PARA PC / WEB (Pantallas anchas)
-  // ==========================================
-  Widget _buildVistaEscritorio(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 40),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start, // Alinea todo arriba
-        children: [
-          // Columna Izquierda (Imágenes Grandes)
-          Expanded(
-            flex: 4, // Toma el 40% del espacio
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Expanded(child: _buildImagenLibro(imagenesUrls[0], altura: 450)), // ¡Imágenes más grandes!
-                const SizedBox(width: 20),
-                Expanded(child: _buildImagenLibro(imagenesUrls[1], altura: 450)),
-              ],
-            ),
-          ),
-          
-          const SizedBox(width: 60), // Gran espacio separador
-          
-          // Columna Derecha (Información y Botón)
-          Expanded(
-            flex: 5, // Toma el 50% del espacio
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildSeccionTextos(),
-                const SizedBox(height: 40),
-                // Botón integrado en el flujo, sin flotar
-                _buildBotonPrestamo(context),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ==========================================
-  // 2. DISEÑO PARA MÓVIL (Pantallas angostas)
-  // ==========================================
-  Widget _buildVistaMovil(BuildContext context) {
-    return Stack(
-      children: [
-        SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 100), // Espacio abajo para el botón flotante
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20.0),
+        child: Form(
+          key: _formKey,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Imágenes apiladas u horizontales pero más pequeñas
+              const Text(
+                'Publicar Material',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Llena los datos para que otros puedan encontrar tu libro.',
+                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+
+              // --- FOTOS (Simuladas por ahora) ---
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  Expanded(child: _buildImagenLibro(imagenesUrls[0], altura: 250)),
-                  const SizedBox(width: 12),
-                  Expanded(child: _buildImagenLibro(imagenesUrls[1], altura: 250)),
+                  _buildBotonFoto('Portada', _tienePortada, () {
+                    setState(() => _tienePortada = !_tienePortada);
+                  }),
+                  _buildBotonFoto('Contraportada', _tieneContraportada, () {
+                    setState(() => _tieneContraportada = !_tieneContraportada);
+                  }),
                 ],
               ),
               const SizedBox(height: 24),
-              _buildSeccionTextos(),
+
+              // --- FORMULARIO ---
+              _buildTextField(
+                controlador: _tituloController,
+                etiqueta: 'Título del Libro',
+                icono: Icons.menu_book,
+              ),
+              const SizedBox(height: 16),
+
+              _buildTextField(
+                controlador: _autorController,
+                etiqueta: 'Autor(es)',
+                icono: Icons.person_outline,
+              ),
+              const SizedBox(height: 16),
+
+              DropdownButtonFormField<String>(
+                value: _estadoFisicoSeleccionado,
+                decoration: InputDecoration(
+                  labelText: 'Estado físico del libro *',
+                  prefixIcon: const Icon(Icons.info_outline),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  filled: true,
+                  fillColor: Colors.grey[50],
+                ),
+                items: _opcionesEstado.map((String estado) {
+                  return DropdownMenuItem(value: estado, child: Text(estado));
+                }).toList(),
+                onChanged: (String? nuevoValor) {
+                  setState(() {
+                    _estadoFisicoSeleccionado = nuevoValor;
+                  });
+                },
+                validator: (value) => value == null ? 'Selecciona el estado' : null,
+              ),
+              const SizedBox(height: 16),
+
+              _buildTextField(
+                controlador: _carrerasController,
+                etiqueta: 'Carrera(s)',
+                hint: 'Ej: Ing. Sistemas, Psicología...',
+                icono: Icons.school_outlined,
+              ),
+              const SizedBox(height: 16),
+
+              _buildTextField(
+                controlador: _materiasController,
+                etiqueta: 'Materia(s)',
+                hint: 'Ej: Programación III, Cálculo...',
+                icono: Icons.class_outlined,
+              ),
+              const SizedBox(height: 16),
+
+              _buildTextField(
+                controlador: _descripcionController,
+                etiqueta: 'Descripción adicional',
+                hint: 'Ej: Tiene algunas notas a lápiz...',
+                icono: Icons.description_outlined,
+                maxLines: 3,
+                esObligatorio: false, // Este campo no es obligatorio
+              ),
+              const SizedBox(height: 32),
+
+              // --- BOTÓN DE ENVIAR ---
+              SizedBox(
+                height: 50,
+                child: ElevatedButton.icon(
+                  onPressed: _estaPublicando ? null : _enviarPublicacion,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange[800],
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  icon: _estaPublicando 
+                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : const Icon(Icons.send, color: Colors.white),
+                  label: Text(
+                    _estaPublicando ? 'Publicando...' : 'Publicar Libro', 
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)
+                  ),
+                ),
+              ),
             ],
           ),
         ),
-        
-        // Botón flotante al fondo para móviles (transparente a los lados)
-        Align(
-          alignment: Alignment.bottomCenter,
-          child: Padding(
-            padding: const EdgeInsets.only(bottom: 20),
-            child: SizedBox(
-              width: 300,
-              height: 55,
-              child: _buildBotonPrestamo(context),
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 
-  // ==========================================
-  // COMPONENTES REUTILIZABLES (Para no repetir código)
-  // ==========================================
+  // --- WIDGETS AUXILIARES (Para que el código quede limpio arriba) ---
 
-  // Toda la información escrita del libro
-  Widget _buildSeccionTextos() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          titulo,
-          style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, height: 1.2), // Título más grande
+  Widget _buildTextField({
+    required TextEditingController controlador,
+    required String etiqueta,
+    required IconData icono,
+    int maxLines = 1,
+    String? hint,
+    bool esObligatorio = true,
+  }) {
+    return TextFormField(
+      controller: controlador,
+      maxLines: maxLines,
+      decoration: InputDecoration(
+        labelText: esObligatorio ? '$etiqueta *' : etiqueta,
+        hintText: hint,
+        prefixIcon: Icon(icono),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        filled: true,
+        fillColor: Colors.grey[50],
+      ),
+      validator: (value) {
+        if (esObligatorio && (value == null || value.trim().isEmpty)) {
+          return 'Este campo es obligatorio';
+        }
+        return null;
+      },
+    );
+  }
+
+  Widget _buildBotonFoto(String titulo, bool tieneFoto, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 120,
+        width: 100,
+        decoration: BoxDecoration(
+          color: tieneFoto ? Colors.green[50] : Colors.grey[100],
+          border: Border.all(color: tieneFoto ? Colors.green : Colors.grey[300]!, width: 2),
+          borderRadius: BorderRadius.circular(12),
         ),
-        const SizedBox(height: 12),
-        Text(
-          autor,
-          style: TextStyle(fontSize: 20, color: Colors.grey[700], fontStyle: FontStyle.italic),
-        ),
-        const SizedBox(height: 20),
-        
-        Row(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.info_outline, size: 24, color: Colors.orange),
-            const SizedBox(width: 8),
-            Text('Estado: $estadoLibro', style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 18)),
+            Icon(
+              tieneFoto ? Icons.check_circle : Icons.add_a_photo,
+              color: tieneFoto ? Colors.green : Colors.grey[500],
+              size: 32,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              titulo,
+              style: TextStyle(
+                color: tieneFoto ? Colors.green[700] : Colors.grey[700],
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
+            ),
           ],
         ),
-        const Divider(height: 40, thickness: 1),
-
-        const Text('Carreras recomendadas:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: carreras.map((c) => _buildChip(c, Colors.blue)).toList(),
-        ),
-        const SizedBox(height: 24),
-        
-        const Text('Materias relacionadas:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: materias.map((m) => _buildChip(m, Colors.green)).toList(),
-        ),
-        const Divider(height: 40, thickness: 1),
-
-        const Text('Descripción', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 12),
-        Text(
-          descripcion,
-          style: const TextStyle(fontSize: 16, height: 1.6),
-        ),
-      ],
-    );
-  }
-
-  // El botón de préstamo centralizado
-  Widget _buildBotonPrestamo(BuildContext context) {
-    return ElevatedButton.icon(
-      onPressed: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Iniciando solicitud de préstamo...')),
-        );
-      },
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.orange,
-        elevation: 6,
-        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 30),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(30),
-        ),
       ),
-      icon: const Icon(Icons.library_books, color: Colors.white, size: 24),
-      label: const Text(
-        'Solicitar Préstamo',
-        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-      ),
-    );
-  }
-
-  // Creador de imágenes ajustable
-  Widget _buildImagenLibro(String url, {required double altura}) {
-    return Container(
-      height: altura,
-      decoration: BoxDecoration(
-        color: Colors.grey[200],
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 10, offset: const Offset(0, 5))
-        ],
-        image: DecorationImage(
-          image: NetworkImage(url),
-          fit: BoxFit.cover, // Llena el contenedor manteniendo la proporción
-        ),
-      ),
-    );
-  }
-
-  Widget _buildChip(String texto, MaterialColor color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        color: color[50],
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color[200]!),
-      ),
-      child: Text(texto, style: TextStyle(color: color[800], fontSize: 14, fontWeight: FontWeight.w600)),
     );
   }
 }
