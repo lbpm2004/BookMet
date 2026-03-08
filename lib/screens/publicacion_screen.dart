@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class PublicarScreen extends StatefulWidget {
-  const PublicarScreen({Key? key}) : super(key: key);
+  const PublicarScreen({super.key});
 
   @override
   _PublicarScreenState createState() => _PublicarScreenState();
@@ -154,7 +154,7 @@ class _PublicarScreenState extends State<PublicarScreen> {
               const SizedBox(height: 16),
 
               DropdownButtonFormField<String>(
-                value: _estadoFisicoSeleccionado,
+                initialValue: _estadoFisicoSeleccionado,
                 decoration: InputDecoration(
                   labelText: 'Estado físico del libro *',
                   prefixIcon: const Icon(Icons.info_outline),
