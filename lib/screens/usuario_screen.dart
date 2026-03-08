@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // ¡IMPORTANTE AÑADIR ESTO!
+import 'package:cloud_firestore/cloud_firestore.dart'; 
 import '../services/auth_service.dart';
+import 'catalogo_screen.dart'; // Importamos el catálogo que acabamos de crear
 
 class UsuarioScreen extends StatefulWidget {
   const UsuarioScreen({Key? key}) : super(key: key);
@@ -16,16 +17,34 @@ class _UsuarioScreenState extends State<UsuarioScreen> {
   
   int _indiceSeleccionado = 0; 
 
+  // Cambia el índice seleccionado cuando tocas un botón de la barra inferior
   void _onItemTapped(int index) {
     setState(() {
       _indiceSeleccionado = index;
     });
   }
 
+  // Cierra sesión y devuelve al usuario a la bienvenida
   void _cerrarSesion() async {
     await _authService.cerrarSesion();
     if (!mounted) return;
     Navigator.pushReplacementNamed(context, '/'); 
+  }
+
+  // Decide qué "cuerpo" mostrar según el botón de abajo que esté activo
+  Widget _obtenerCuerpoPantalla() {
+    switch (_indiceSeleccionado) {
+      case 0:
+        return _buildInicioFeed(); // El inicio normal (las últimas publicaciones)
+      case 1:
+        return const CatalogoScreen(); // El catálogo de 4 columnas y 5 filtros
+      case 2:
+        return const Center(child: Text('Pantalla de Publicar (En construcción)'));
+      case 3:
+        return const Center(child: Text('Mis Solicitudes (En construcción)'));
+      default:
+        return _buildInicioFeed();
+    }
   }
 
   @override
@@ -33,7 +52,7 @@ class _UsuarioScreenState extends State<UsuarioScreen> {
     return Scaffold(
       backgroundColor: Colors.grey[100], 
       
-      // 1. LA BARRA SUPERIOR (Sin la foto del usuario)
+      // 1. LA BARRA SUPERIOR (Limpia)
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 1,
@@ -47,22 +66,22 @@ class _UsuarioScreenState extends State<UsuarioScreen> {
         ),
       ),
 
-      // 2. EL MENÚ LATERAL (Con Cerrar Sesión al final y foto más grande)
+      // 2. EL MENÚ LATERAL (Drawer)
       drawer: Drawer(
         child: Column(
           children: [
-            // Lista de opciones que ocupa todo el espacio superior disponible
+            // Opciones de arriba (Ocupa el espacio disponible)
             Expanded(
               child: ListView(
                 padding: EdgeInsets.zero,
                 children: [
-                  // Usamos FutureBuilder para buscar el ROL en Firestore
+                  // FutureBuilder para sacar la Foto Real y el Rol desde Firestore
                   FutureBuilder<DocumentSnapshot>(
                     future: FirebaseFirestore.instance.collection('usuarios').doc(user?.uid).get(),
                     builder: (context, snapshot) {
                       String rolTexto = 'Cargando...';
                       String nombreTexto = user?.displayName ?? 'Usuario';
-                      String? urlFotoFirestore; // <-- Creamos una variable para la foto
+                      String? urlFotoFirestore; 
 
                       if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
                         var datosUsuario = snapshot.data!.data() as Map<String, dynamic>?;
@@ -70,12 +89,10 @@ class _UsuarioScreenState extends State<UsuarioScreen> {
                           rolTexto = datosUsuario['rol'] ?? 'ESTUDIANTE';
                           rolTexto = rolTexto[0].toUpperCase() + rolTexto.substring(1).toLowerCase();
                           nombreTexto = datosUsuario['nombre'] ?? nombreTexto;
-                          // ¡Extraemos la URL de la foto directamente de Firestore!
-                          urlFotoFirestore = datosUsuario['fotoPerfil'];
+                          urlFotoFirestore = datosUsuario['fotoPerfil']; 
                         }
                       }
-                      
-                      // Verificamos si la variable de Firestore tiene un link válido
+
                       bool tieneFoto = urlFotoFirestore != null && urlFotoFirestore.isNotEmpty;
 
                       return DrawerHeader(
@@ -83,17 +100,16 @@ class _UsuarioScreenState extends State<UsuarioScreen> {
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            // 1. Foto de perfil grande y segura
+                            // Foto grande
                             CircleAvatar(
-                              radius: 40, // Tamaño grande (80px de diámetro) pero controlado
+                              radius: 40,
                               backgroundColor: Colors.white,
-                              // Usamos la URL de Firestore en lugar de la de FirebaseAuth
                               backgroundImage: tieneFoto ? NetworkImage(urlFotoFirestore!) : null,
                               child: !tieneFoto ? const Icon(Icons.person, size: 45, color: Colors.orange) : null,
                             ),
-                            const SizedBox(width: 16), // Espacio entre foto y texto
+                            const SizedBox(width: 16),
                             
-                            // 2. Columna con Nombre y Rol
+                            // Nombre y Rol
                             Expanded(
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -106,14 +122,14 @@ class _UsuarioScreenState extends State<UsuarioScreen> {
                                       fontWeight: FontWeight.bold, 
                                       color: Colors.white
                                     ),
-                                    maxLines: 2, // Si el nombre es muy largo, baja a la siguiente línea
+                                    maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   const SizedBox(height: 6),
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: Colors.white24, // Un fondito sutil para resaltar el rol
+                                      color: Colors.white24,
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Text(
@@ -152,9 +168,9 @@ class _UsuarioScreenState extends State<UsuarioScreen> {
               ),
             ),
             
-            // Botón de Cerrar Sesión pegado estrictamente abajo
+            // Botón Cerrar Sesión pegado al fondo
             const Divider(height: 1),
-            SafeArea( // SafeArea evita que el botón quede oculto por la barra de navegación táctil del teléfono
+            SafeArea( 
               child: ListTile(
                 leading: const Icon(Icons.exit_to_app, color: Colors.red),
                 title: const Text('Cerrar Sesión', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
@@ -165,41 +181,8 @@ class _UsuarioScreenState extends State<UsuarioScreen> {
         ),
       ),
 
-      // 3. EL CUERPO PRINCIPAL (Feed)
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Buscador actualizado
-            TextField(
-              decoration: InputDecoration(
-                hintText: '¿Qué libro estás buscando?',
-                prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(30),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-            const SizedBox(height: 30), // Espacio ajustado ya que quitamos los filtros/chips
-
-            // Título de sección
-            const Text(
-              'Últimas Publicaciones',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-
-            // Tarjetas de ejemplo (Eliminamos _buildChip y la fila de filtros)
-            _buildPublicacionCard('Cálculo de una variable', 'Matemáticas I', 'Intercambio', 'Buen estado'),
-            _buildPublicacionCard('Física Universitaria Vol. 1', 'Física I', 'Donación', 'Usado'),
-            _buildPublicacionCard('Fundamentos de Programación', 'Programación I', 'Intercambio', 'Casi nuevo'),
-          ],
-        ),
-      ),
+      // 3. EL CUERPO PRINCIPAL (Cambia dinámicamente)
+      body: _obtenerCuerpoPantalla(),
 
       // 4. BARRA DE NAVEGACIÓN INFERIOR
       bottomNavigationBar: BottomNavigationBar(
@@ -218,7 +201,44 @@ class _UsuarioScreenState extends State<UsuarioScreen> {
     );
   }
 
-  // WIDGET AUXILIAR PARA LAS TARJETAS DE LIBROS
+  // --- WIDGETS AUXILIARES ---
+
+  // El cuerpo visual del Inicio (Opción 0)
+  Widget _buildInicioFeed() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            decoration: InputDecoration(
+              hintText: '¿Qué libro estás buscando?',
+              prefixIcon: const Icon(Icons.search, color: Colors.grey),
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(30),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+          const SizedBox(height: 30), 
+
+          const Text(
+            'Últimas Publicaciones',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 10),
+
+          _buildPublicacionCard('Cálculo de una variable', 'Matemáticas I', 'Intercambio', 'Buen estado'),
+          _buildPublicacionCard('Física Universitaria Vol. 1', 'Física I', 'Donación', 'Usado'),
+          _buildPublicacionCard('Fundamentos de Programación', 'Programación I', 'Intercambio', 'Casi nuevo'),
+        ],
+      ),
+    );
+  }
+
+  // Tarjeta de diseño para el inicio
   Widget _buildPublicacionCard(String titulo, String materia, String tipo, String estado) {
     return Card(
       margin: const EdgeInsets.only(bottom: 16.0),

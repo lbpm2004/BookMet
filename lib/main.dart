@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_application_bookmet/screens/catalogo_screen.dart';
 import 'package:flutter_application_bookmet/screens/usuario_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'firebase_options.dart';
 import 'package:flutter_application_bookmet/screens/bienvenida_screen.dart';
 import 'package:flutter_application_bookmet/screens/registro_screen.dart'; 
 import 'package:flutter_application_bookmet/screens/login_screen.dart'; 
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,9 +38,11 @@ class MyApp extends StatelessWidget {
       initialRoute: '/', // La ruta inicial
     routes: {
       '/': (context) => const BienvenidaScreen(), // Define la pantalla de bienvenida
+      
       '/login': (context) => const LoginScreen(), // pantalla de login
       '/registro': (context) => const RegistroScreen(), // pantalla de registro
       '/usuario': (context) => const UsuarioScreen(), // pantalla de usuario logeado
+      'catalogo': (context) => const CatalogoScreen(), 
       },
     );
   }
