@@ -13,7 +13,7 @@ class PublicarScreen extends StatefulWidget {
 }
 
 class _PublicarScreenState extends State<PublicarScreen> {
-  // Controladores exactos que solicitaste
+  // Controladores exactos
   final _nombreController = TextEditingController();
   final _autoresController = TextEditingController();
   final _materiasController = TextEditingController();
@@ -105,7 +105,7 @@ class _PublicarScreenState extends State<PublicarScreen> {
           urlContraportada = await _subirImagenASupabase(_contraportadaBytes!, 'contraportada', _contraportadaExtension);
         }
 
-        // 2. Guardar en Firestore con tus atributos exactos
+        // 2. Guardar en Firestore
         await FirebaseFirestore.instance.collection('libros').add({
           'nombre': _nombreController.text.trim(),
           'autores': _autoresController.text.trim().split(',').map((e) => e.trim()).toList(),
@@ -116,22 +116,20 @@ class _PublicarScreenState extends State<PublicarScreen> {
           'portadaUrl': urlPortada,
           'contraportadaUrl': urlContraportada,
           'propietarioId': userId,
-          'estado_publicacion': 'pendiente', // Para tu lógica de aprobación
+          'estado_publicacion': 'pendiente', 
           'fechaCreacion': FieldValue.serverTimestamp(),
         });
 
-        
         if (!mounted) return;
-        // 1. Mostramos el mensaje verde en el borde inferior
+        
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('¡Publicación exitosa!', style: TextStyle(fontWeight: FontWeight.bold)), 
             backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating, // Hace que flote un poco en el borde inferior (opcional pero se ve genial)
+            behavior: SnackBarBehavior.floating,
           ),
         );
 
-        // 2. Redirigimos a la pantalla del usuario destruyendo la pantalla de publicar
         Navigator.pushReplacementNamed(context, '/usuario');
 
       } catch (e) {
@@ -147,183 +145,12 @@ class _PublicarScreenState extends State<PublicarScreen> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Publicar Material Académico',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black87),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Llena los datos del libro para enviarlo a revisión. Recuerda que la calidad de la información ayuda a otros estudiantes.',
-                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-              ),
-              const SizedBox(height: 24),
-
-              // --- CAMPOS DE TEXTO ---
-              _buildTextField(
-                controlador: _tituloController,
-                etiqueta: 'Título del Libro',
-                icono: Icons.book,
-                hint: 'Ej: Cálculo de una variable',
-              ),
-              const SizedBox(height: 16),
-              _buildTextField(
-                controlador: _autorController,
-                etiqueta: 'Autor(es)',
-                icono: Icons.person,
-                hint: 'Ej: James Stewart',
-              ),
-              const SizedBox(height: 16),
-
-              // --- DROPDOWN ESTADO FÍSICO ---
-              DropdownButtonFormField<String>(
-                initialValue: _estadoFisicoSeleccionado,
-                decoration: InputDecoration(
-                  labelText: 'Estado Físico *',
-                  prefixIcon: const Icon(Icons.health_and_safety),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  filled: true,
-                  fillColor: Colors.grey[50],
-                ),
-                items: _opcionesEstado.map((estado) {
-                  return DropdownMenuItem(value: estado, child: Text(estado));
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _estadoFisicoSeleccionado = value;
-                  });
-                },
-                validator: (value) => value == null ? 'Selecciona el estado del libro' : null,
-              ),
-              const SizedBox(height: 16),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildTextField(
-                      controlador: _carrerasController,
-                      etiqueta: 'Carrera',
-                      icono: Icons.school,
-                      hint: 'Ej: Ing. Sistemas',
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildTextField(
-                      controlador: _materiasController,
-                      etiqueta: 'Materia',
-                      icono: Icons.class_,
-                      hint: 'Ej: Matemáticas I',
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              _buildTextField(
-                controlador: _descripcionController,
-                etiqueta: 'Descripción / Detalles',
-                icono: Icons.description,
-                maxLines: 3,
-                hint: 'Comenta si tiene rayones, si le faltan páginas, edición, etc.',
-                esObligatorio: false, // La descripción no es obligatoria
-              ),
-              const SizedBox(height: 24),
-
-              // --- SECCIÓN DE IMÁGENES ---
-              const Text('Fotografías del Material *', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildBotonImagen(
-                      titulo: 'Portada',
-                      tieneImagen: _tienePortada,
-                      onTap: () => setState(() => _tienePortada = !_tienePortada),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildBotonImagen(
-                      titulo: 'Contraportada',
-                      tieneImagen: _tieneContraportada,
-                      onTap: () => setState(() => _tieneContraportada = !_tieneContraportada),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 32),
-
-              // --- BOTÓN DE ENVIAR ---
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: _estaCargando
-                    ? const Center(child: CircularProgressIndicator(color: Colors.orange))
-                    : ElevatedButton.icon(
-                        onPressed: _enviarPublicacion,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange[800],
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          elevation: 2,
-                        ),
-                        icon: const Icon(Icons.send, color: Colors.white),
-                        label: const Text('Enviar para Revisión', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
-                      ),
-              ),
-              const SizedBox(height: 20),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // --- WIDGETS REUTILIZABLES ---
-
-  Widget _buildTextField({
-    required TextEditingController controlador,
-    required String etiqueta,
-    required IconData icono,
-    int maxLines = 1,
-    String? hint,
-    bool esObligatorio = true,
-  }) {
-    return TextFormField(
-      controller: controlador,
-      maxLines: maxLines,
-      decoration: InputDecoration(
-        labelText: esObligatorio ? '$etiqueta *' : etiqueta,
-        hintText: hint,
-        prefixIcon: Icon(icono),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        filled: true,
-        fillColor: Colors.grey[50],
-      ),
-      validator: (value) {
-        if (esObligatorio && (value == null || value.trim().isEmpty)) {
-          return 'Este campo es obligatorio';
-        }
-        return null;
-      },
-    );
-  }
-
-  Widget _buildBotonImagen({required String titulo, required bool tieneImagen, required VoidCallback onTap}) {
+  // --- WIDGET AUXILIAR PARA LAS FOTOS ---
+  Widget _buildFotoContainer(String titulo, Uint8List? bytes, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 180, // Un poco más altas para que se vean bien en la columna
+        height: 180, 
         width: double.infinity,
         margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(
@@ -357,14 +184,12 @@ class _PublicarScreenState extends State<PublicarScreen> {
       appBar: AppBar(
         title: const Text('Publicar Material'),
       ),
-      // SingleChildScrollView previene la pantalla blanca por desbordamiento de píxeles
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            
-            // --- COLUMNA IZQUIERDA: FOTOS Y MENSAJE (Menos de la mitad, aprox 35%) ---
+            // --- COLUMNA IZQUIERDA: FOTOS Y MENSAJE ---
             Expanded(
               flex: 35,
               child: Column(
@@ -372,7 +197,6 @@ class _PublicarScreenState extends State<PublicarScreen> {
                   _buildFotoContainer('Portada', _portadaBytes, () => _seleccionarImagen(true)),
                   _buildFotoContainer('Contraportada', _contraportadaBytes, () => _seleccionarImagen(false)),
                   
-                  // Recuadro azulado de advertencia
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -398,9 +222,9 @@ class _PublicarScreenState extends State<PublicarScreen> {
               ),
             ),
             
-            const SizedBox(width: 32), // Separación entre columnas
+            const SizedBox(width: 32),
 
-            // --- COLUMNA DERECHA: FORMULARIO (Aprox 65%) ---
+            // --- COLUMNA DERECHA: FORMULARIO ---
             Expanded(
               flex: 65,
               child: Form(
@@ -447,7 +271,6 @@ class _PublicarScreenState extends State<PublicarScreen> {
                     ),
                     const SizedBox(height: 16),
                     
-                    // Descripción condicional
                     TextFormField(
                       controller: _descripcionController,
                       maxLines: 3,
@@ -457,7 +280,6 @@ class _PublicarScreenState extends State<PublicarScreen> {
                         border: const OutlineInputBorder(),
                       ),
                       validator: (v) {
-                        // Validación: Solo es obligatorio si el estado es 'deteriorado'
                         if (_estadoSeleccionado == 'deteriorado' && (v == null || v.trim().isEmpty)) {
                           return 'Debes describir el estado deteriorado del libro.';
                         }
