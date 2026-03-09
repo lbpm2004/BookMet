@@ -46,7 +46,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
           nombre: _nombreController.text.trim(),
           apellido: _apellidoController.text.trim(), 
           cedula: _cedulaController.text.trim(), // Puede ir vacío sin problema
-          email: _correoController.text.trim(),
+          email: _correoController.text.trim().toLowerCase(), // Aseguramos que guarde en minúsculas
           password: _passwordController.text.trim(),
           fotoBytes: _imagenBytes, // <-- Pasamos los bytes crudos directamente
         );
@@ -227,11 +227,18 @@ class _RegistroScreenState extends State<RegistroScreen> {
                       icon: Icons.email_outlined,
                       type: TextInputType.emailAddress,
                       validator: (value) {
-                        if (value!.isEmpty) return 'Ingresa tu correo';
-                        if (!value.endsWith('@unimet.edu.ve') && !value.endsWith('@correo.unimet.edu.ve')) {
-                          return 'Debes usar tu correo de la Unimet';
+                        // 1. Verificamos que no esté vacío
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Por favor ingresa tu correo';
                         }
-                        return null;
+                        
+                        // 2. VALIDACIÓN ESTRICTA UNIMET (Requisito RF-01)
+                        String email = value.trim().toLowerCase();
+                        if (!email.endsWith('@unimet.edu.ve') && !email.endsWith('@correo.unimet.edu.ve')) {
+                          return 'Solo se permiten correos @correo.unimet.edu.ve o @unimet.edu.ve';
+                        }
+                        
+                        return null; // Si pasa las validaciones, está correcto
                       },
                     ),
                     const SizedBox(height: 20),

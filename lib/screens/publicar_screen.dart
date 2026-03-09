@@ -6,14 +6,16 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class PublicarScreen extends StatefulWidget {
-  const PublicarScreen({super.key});
+  final Map<String, dynamic>? libroAEditar;
+  final String? docId;
+
+  const PublicarScreen({super.key, this.libroAEditar, this.docId});
 
   @override
   _PublicarScreenState createState() => _PublicarScreenState();
 }
 
 class _PublicarScreenState extends State<PublicarScreen> {
-  // Controladores exactos
   final _nombreController = TextEditingController();
   final _autoresController = TextEditingController();
   final _materiasController = TextEditingController();
@@ -33,11 +35,23 @@ class _PublicarScreenState extends State<PublicarScreen> {
 
   Uint8List? _portadaBytes;
   String _portadaExtension = 'jpg';
-
   Uint8List? _contraportadaBytes;
   String _contraportadaExtension = 'jpg';
 
   final ImagePicker _picker = ImagePicker();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.libroAEditar != null) {
+      _nombreController.text = widget.libroAEditar!['titulo'] ?? '';
+      _autoresController.text = widget.libroAEditar!['autor'] ?? '';
+      _materiasController.text = widget.libroAEditar!['materia'] ?? '';
+      _carrerasController.text = widget.libroAEditar!['carrera'] ?? '';
+      _descripcionController.text = widget.libroAEditar!['descripcion'] ?? '';
+      _estadoSeleccionado = widget.libroAEditar!['estadoFisico'];
+    }
+  }
 
   Future<void> _seleccionarImagen(bool esPortada) async {
     final XFile? imagen = await _picker.pickImage(
@@ -64,108 +78,89 @@ class _PublicarScreenState extends State<PublicarScreen> {
   Future<String?> _subirImagenASupabase(Uint8List bytes, String tipo, String extension) async {
     try {
       final String fileName = '${DateTime.now().millisecondsSinceEpoch}_$tipo.$extension';
-      final String bucketName = 'publicaciones';
-      final String filePath = 'imagenes/$fileName';
-
       await Supabase.instance.client.storage
-          .from(bucketName)
+          .from('portadas')
           .uploadBinary(
-            filePath,
+            fileName,
             bytes,
             fileOptions: FileOptions(contentType: 'image/$extension'),
           );
 
       return Supabase.instance.client.storage
-          .from(bucketName)
-          .getPublicUrl(filePath);
+          .from('portadas')
+          .getPublicUrl(fileName);
     } catch (e) {
-      throw Exception('Fallo Supabase al subir $tipo: $e');
+      debugPrint("Error subiendo a Supabase: $e");
+      return null;
     }
   }
 
-  void _publicarLibro() async {
-    if (_formKey.currentState!.validate()) {
-      if (_portadaBytes == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('La foto de la portada es obligatoria.'), backgroundColor: Colors.orange),
-        );
-        return;
+  // ESTA FUNCIÓN ES LA QUE ARREGLA EL PANTALLAZO BLANCO
+  void _enviarSolicitud() async {
+    if (!_formKey.currentState!.validate()) return;
+    
+    setState(() => _isLoading = true);
+
+    try {
+      final String userId = FirebaseAuth.instance.currentUser?.uid ?? '';
+      if (userId.isEmpty) throw Exception('Sesión expirada. Inicia sesión de nuevo.');
+
+      String? urlPortada = widget.libroAEditar?['fotoUrl'] ?? 'https://via.placeholder.com/300x400.png?text=Sin+Portada';
+      String? urlContraportada = widget.libroAEditar?['contraportadaUrl'];
+
+      if (_portadaBytes != null) {
+        String? subida = await _subirImagenASupabase(_portadaBytes!, 'portada', _portadaExtension);
+        if (subida != null) urlPortada = subida;
       }
 
-      setState(() => _isLoading = true);
-
-      try {
-        final String userId = FirebaseAuth.instance.currentUser?.uid ?? '';
-        if (userId.isEmpty) throw Exception('Debes iniciar sesión.');
-
-        // 1. Subir imágenes
-        String? urlPortada = await _subirImagenASupabase(_portadaBytes!, 'portada', _portadaExtension);
-        String? urlContraportada;
-        if (_contraportadaBytes != null) {
-          urlContraportada = await _subirImagenASupabase(_contraportadaBytes!, 'contraportada', _contraportadaExtension);
-        }
-
-        // 2. Guardar en Firestore
-        await FirebaseFirestore.instance.collection('libros').add({
-          'nombre': _nombreController.text.trim(),
-          'autores': _autoresController.text.trim().split(',').map((e) => e.trim()).toList(),
-          'materias': _materiasController.text.trim().split(',').map((e) => e.trim()).toList(),
-          'carreras': _carrerasController.text.trim().split(',').map((e) => e.trim()).toList(),
-          'estado_fisico': _estadoSeleccionado,
-          'descripcion': _descripcionController.text.trim(),
-          'portadaUrl': urlPortada,
-          'contraportadaUrl': urlContraportada,
-          'propietarioId': userId,
-          'estado_publicacion': 'pendiente', 
-          'fechaCreacion': FieldValue.serverTimestamp(),
-        });
-
-        if (!mounted) return;
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('¡Publicación exitosa!', style: TextStyle(fontWeight: FontWeight.bold)), 
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-
-        Navigator.pushReplacementNamed(context, '/usuario');
-
-      } catch (e) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-        );
-      } finally {
-        if (mounted) {
-          setState(() => _isLoading = false);
-        }
+      if (_contraportadaBytes != null) {
+        String? subida = await _subirImagenASupabase(_contraportadaBytes!, 'contraportada', _contraportadaExtension);
+        if (subida != null) urlContraportada = subida;
       }
-    }
-  }
 
-  // --- WIDGET AUXILIAR PARA LAS FOTOS ---
-  Widget _buildFotoContainer(String titulo, Uint8List? bytes, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 180, 
-        width: double.infinity,
-        margin: const EdgeInsets.only(bottom: 16),
-        decoration: BoxDecoration(
-          color: Colors.grey[200],
-          border: Border.all(color: Colors.grey[400]!),
-          borderRadius: BorderRadius.circular(8),
-          image: bytes != null
-              ? DecorationImage(image: MemoryImage(bytes), fit: BoxFit.cover)
-              : null,
+      final Map<String, dynamic> datosLibro = {
+        'titulo': _nombreController.text.trim(),
+        'autor': _autoresController.text.trim(),
+        'materia': _materiasController.text.trim(),
+        'carrera': _carrerasController.text.trim(),
+        'estadoFisico': _estadoSeleccionado,
+        'descripcion': _descripcionController.text.trim(),
+        'fotoUrl': urlPortada, 
+        'contraportadaUrl': urlContraportada,
+        'usuarioId': userId, 
+        'estado': 'Pendiente', 
+        'fechaActualizacion': FieldValue.serverTimestamp(),
+      };
+
+      if (widget.docId != null) {
+        await FirebaseFirestore.instance.collection('publicaciones').doc(widget.docId).update(datosLibro);
+      } else {
+        datosLibro['fechaPublicacion'] = FieldValue.serverTimestamp();
+        await FirebaseFirestore.instance.collection('publicaciones').add(datosLibro);
+      }
+
+      // IMPORTANTE: Manejo de éxito sin bloquear la app
+      if (!mounted) return;
+      
+      setState(() => _isLoading = false);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('¡Solicitud procesada correctamente! 🕒'), 
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
         ),
-        child: bytes == null
-            ? Center(child: Text('Subir $titulo', style: TextStyle(color: Colors.grey[600])))
-            : null,
-      ),
-    );
+      );
+
+      Navigator.of(context).pop(); // Volver atrás de forma segura
+
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+      );
+    }
   }
 
   @override
@@ -178,125 +173,121 @@ class _PublicarScreenState extends State<PublicarScreen> {
     super.dispose();
   }
 
+  Widget _buildFotoContainer(String titulo, Uint8List? bytes, String? urlPrevia, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 180, 
+        width: double.infinity,
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(
+          color: Colors.grey[200],
+          border: Border.all(color: Colors.grey[400]!),
+          borderRadius: BorderRadius.circular(8),
+          image: bytes != null
+              ? DecorationImage(image: MemoryImage(bytes), fit: BoxFit.cover)
+              : (urlPrevia != null && urlPrevia.isNotEmpty ? DecorationImage(image: NetworkImage(urlPrevia), fit: BoxFit.cover) : null),
+        ),
+        child: (bytes == null && (urlPrevia == null || urlPrevia.isEmpty))
+            ? Center(child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.add_a_photo, color: Colors.grey),
+                  Text('Subir $titulo', style: TextStyle(color: Colors.grey[600])),
+                ],
+              ))
+            : null,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Publicar Material'),
+        title: Text(widget.docId != null ? 'Editar Libro' : 'Nueva Publicación'),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.orange[800],
+        elevation: 1,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // --- COLUMNA IZQUIERDA: FOTOS Y MENSAJE ---
             Expanded(
-              flex: 35,
+              flex: 40,
               child: Column(
                 children: [
-                  _buildFotoContainer('Portada', _portadaBytes, () => _seleccionarImagen(true)),
-                  _buildFotoContainer('Contraportada', _contraportadaBytes, () => _seleccionarImagen(false)),
-                  
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.blue[50],
-                      border: Border.all(color: Colors.blue[200]!),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(Icons.info_outline, color: Colors.blue[800]),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            'Al enviar el formulario, se pausará la publicación hasta que un administrador la apruebe.',
-                            style: TextStyle(color: Colors.blue[900], height: 1.3),
-                          ),
-                        ),
-                      ],
+                  _buildFotoContainer('Portada', _portadaBytes, widget.libroAEditar?['fotoUrl'], () => _seleccionarImagen(true)),
+                  _buildFotoContainer('Contraportada', _contraportadaBytes, widget.libroAEditar?['contraportadaUrl'], () => _seleccionarImagen(false)),
+                  const Card(
+                    color: Color(0xFFE3F2FD),
+                    child: Padding(
+                      padding: EdgeInsets.all(8.0),
+                      child: Text('Toda publicación pasa por revisión del administrador.', style: TextStyle(fontSize: 11, color: Colors.blue)),
                     ),
                   )
                 ],
               ),
             ),
-            
-            const SizedBox(width: 32),
-
-            // --- COLUMNA DERECHA: FORMULARIO ---
+            const SizedBox(width: 24),
             Expanded(
-              flex: 65,
+              flex: 60,
               child: Form(
                 key: _formKey,
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     TextFormField(
                       controller: _nombreController,
-                      decoration: const InputDecoration(labelText: 'Nombre del libro', border: OutlineInputBorder()),
-                      validator: (v) => v!.isEmpty ? 'Requerido' : null,
+                      decoration: const InputDecoration(labelText: 'Título del libro', border: OutlineInputBorder()),
+                      validator: (v) => v!.isEmpty ? 'Ingresa el título' : null,
                     ),
-                    const SizedBox(height: 16),
-                    
+                    const SizedBox(height: 12),
                     TextFormField(
                       controller: _autoresController,
-                      decoration: const InputDecoration(labelText: 'Autor(es) separados por coma', border: OutlineInputBorder()),
-                      validator: (v) => v!.isEmpty ? 'Requerido' : null,
+                      decoration: const InputDecoration(labelText: 'Autor', border: OutlineInputBorder()),
+                      validator: (v) => v!.isEmpty ? 'Ingresa el autor' : null,
                     ),
-                    const SizedBox(height: 16),
-                    
+                    const SizedBox(height: 12),
                     TextFormField(
                       controller: _materiasController,
-                      decoration: const InputDecoration(labelText: 'Materias separadas por coma', border: OutlineInputBorder()),
-                      validator: (v) => v!.isEmpty ? 'Requerido' : null,
+                      decoration: const InputDecoration(labelText: 'Materia', border: OutlineInputBorder()),
+                      validator: (v) => v!.isEmpty ? 'Ingresa la materia' : null,
                     ),
-                    const SizedBox(height: 16),
-                    
+                    const SizedBox(height: 12),
                     TextFormField(
                       controller: _carrerasController,
-                      decoration: const InputDecoration(labelText: 'Carreras separadas por coma', border: OutlineInputBorder()),
-                      validator: (v) => v!.isEmpty ? 'Requerido' : null,
+                      decoration: const InputDecoration(labelText: 'Carrera', border: OutlineInputBorder()),
+                      validator: (v) => v!.isEmpty ? 'Ingresa la carrera' : null,
                     ),
-                    const SizedBox(height: 16),
-                    
+                    const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
                       value: _estadoSeleccionado,
-                      decoration: const InputDecoration(labelText: 'Estado del libro', border: OutlineInputBorder()),
-                      items: _opcionesEstado.map((estado) {
-                        return DropdownMenuItem(value: estado, child: Text(estado.replaceAll('_', ' ').toUpperCase()));
-                      }).toList(),
+                      decoration: const InputDecoration(labelText: 'Estado físico', border: OutlineInputBorder()),
+                      items: _opcionesEstado.map((e) => DropdownMenuItem(value: e, child: Text(e.replaceAll('_', ' ').toUpperCase()))).toList(),
                       onChanged: (val) => setState(() => _estadoSeleccionado = val),
-                      validator: (v) => v == null ? 'Selecciona un estado' : null,
+                      validator: (v) => v == null ? 'Selecciona el estado' : null,
                     ),
-                    const SizedBox(height: 16),
-                    
+                    const SizedBox(height: 12),
                     TextFormField(
                       controller: _descripcionController,
                       maxLines: 3,
-                      decoration: InputDecoration(
-                        labelText: 'Descripción detallada',
-                        hintText: _estadoSeleccionado == 'deteriorado' ? 'Describe los daños obligatoriamente' : 'Opcional si está en buen estado',
-                        border: const OutlineInputBorder(),
-                      ),
-                      validator: (v) {
-                        if (_estadoSeleccionado == 'deteriorado' && (v == null || v.trim().isEmpty)) {
-                          return 'Debes describir el estado deteriorado del libro.';
-                        }
-                        return null;
-                      },
+                      decoration: const InputDecoration(labelText: 'Descripción', border: OutlineInputBorder()),
                     ),
-                    const SizedBox(height: 32),
-                    
+                    const SizedBox(height: 24),
                     _isLoading
-                        ? const Center(child: CircularProgressIndicator())
-                        : ElevatedButton(
-                            onPressed: _publicarLibro,
-                            style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 20),
-                              backgroundColor: Colors.blue[800],
+                        ? const CircularProgressIndicator(color: Colors.orange)
+                        : SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: _enviarSolicitud,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.orange[800],
+                                padding: const EdgeInsets.symmetric(vertical: 18),
+                              ),
+                              child: Text(widget.docId != null ? 'GUARDAR CAMBIOS' : 'PUBLICAR', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                             ),
-                            child: const Text('ENVIAR FORMULARIO', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                           ),
                   ],
                 ),

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // <-- NUEVO: Para leer el rol y estado
 import '../services/auth_service.dart';
 import '../widgets/fondo_con_blur.dart';
+import 'admin_screen.dart'; // <-- NUEVO: Importamos la pantalla del administrador
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -25,16 +27,56 @@ class _LoginScreenState extends State<LoginScreen> {
           _correoController.text.trim(),
           _passwordController.text.trim(),
         );
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('¡Bienvenido de nuevo! 📚'), backgroundColor: Colors.green),
-        );
-        
-        Navigator.pushNamedAndRemoveUntil(
-          context, 
-          '/usuario', 
-          (Route<dynamic> route) => false, 
-        );
+
+        // --- INICIO DE NUEVAS ACTUALIZACIONES (BANEOS Y ROLES) ---
+        User? currentUser = FirebaseAuth.instance.currentUser;
+        if (currentUser != null) {
+          DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('usuarios').doc(currentUser.uid).get();
+
+          if (!mounted) return;
+
+          if (userDoc.exists) {
+            String rol = userDoc.data().toString().contains('rol') ? userDoc.get('rol') : 'ESTUDIANTE';
+            bool estaBaneado = userDoc.data().toString().contains('baneado') ? userDoc.get('baneado') : false;
+
+            // EL MURO DE SEGURIDAD 🚫
+            if (estaBaneado) {
+              await FirebaseAuth.instance.signOut(); // Cerramos la sesión en la cara
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('ACCESO DENEGADO: Tu cuenta ha sido suspendida por la administración.'),
+                  backgroundColor: Colors.red,
+                  duration: Duration(seconds: 4),
+                ),
+              );
+              setState(() => _isLoading = false);
+              return; // Detiene la ejecución aquí, no entra a la app
+            }
+
+            // Mensaje de éxito original
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('¡Bienvenido de nuevo! 📚'), backgroundColor: Colors.green),
+            );
+
+            // EL POLICÍA DE TRÁNSITO (RUTEO) 🚦
+            if (rol == 'ADMINISTRADOR') {
+              // Si es Admin, vamos a la pantalla de Admin (borrando el historial de navegación)
+              Navigator.pushAndRemoveUntil(
+                context, 
+                MaterialPageRoute(builder: (context) => const AdminScreen()), 
+                (Route<dynamic> route) => false
+              );
+            } else {
+              // Si es Estudiante, usamos tu ruta nombrada original
+              Navigator.pushNamedAndRemoveUntil(
+                context, 
+                '/usuario', 
+                (Route<dynamic> route) => false, 
+              );
+            }
+          }
+        }
+        // --- FIN DE NUEVAS ACTUALIZACIONES ---
         
       } on FirebaseAuthException catch (e) {
         String mensajeError = 'Ocurrió un error inesperado';

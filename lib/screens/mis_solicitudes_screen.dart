@@ -1,202 +1,145 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-class MisSolicitudesScreen extends StatefulWidget {
+class MisSolicitudesScreen extends StatelessWidget {
   const MisSolicitudesScreen({super.key});
 
-  @override
-  _MisSolicitudesScreenState createState() => _MisSolicitudesScreenState();
-}
+  // Función para Aceptar o Rechazar una solicitud
+  Future<void> _cambiarEstadoSolicitud(String solId, String nuevoEstado, String libroId) async {
+    await FirebaseFirestore.instance.collection('solicitudes').doc(solId).update({
+      'estadoSolicitud': nuevoEstado,
+    });
 
-class _MisSolicitudesScreenState extends State<MisSolicitudesScreen> {
-  // --- DATOS SIMULADOS PARA DISEÑO ---
-  final List<Map<String, dynamic>> _solicitudesEnviadas = [
-    {
-      'titulo': 'Cálculo de una variable',
-      'autor': 'James Stewart',
-      'fecha': '08 Mar 2026',
-      'estado': 'Pendiente',
-      'imagen': 'https://via.placeholder.com/150/003087/FFFFFF?text=Calculo',
-    },
-    {
-      'titulo': 'Física Universitaria Vol. 1',
-      'autor': 'Sears, Zemansky',
-      'fecha': '01 Mar 2026',
-      'estado': 'Aprobada',
-      'imagen': 'https://via.placeholder.com/150/FF8200/FFFFFF?text=Fisica',
-    },
-    {
-      'titulo': 'Introducción a la Programación',
-      'autor': 'Luis Joyanes',
-      'fecha': '15 Feb 2026',
-      'estado': 'Rechazada',
-      'imagen': 'https://via.placeholder.com/150/555555/FFFFFF?text=Prog',
+    // Si se rechaza, el libro vuelve a estar 'DISPONIBLE' en el catálogo
+    if (nuevoEstado == 'RECHAZADA') {
+      await FirebaseFirestore.instance.collection('publicaciones').doc(libroId).update({
+        'estado': 'DISPONIBLE',
+      });
     }
-  ];
-
-  final List<Map<String, dynamic>> _solicitudesRecibidas = [
-    {
-      'titulo': 'Química Orgánica',
-      'solicitante': 'María Pérez (Ing. Química)',
-      'fecha': '07 Mar 2026',
-      'estado': 'Pendiente',
-      'imagen': 'https://via.placeholder.com/150/28A745/FFFFFF?text=Quimica',
-    }
-  ];
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Usamos DefaultTabController para manejar las pestañas automáticamente
+    final String? userId = FirebaseAuth.instance.currentUser?.uid;
+
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        backgroundColor: Colors.grey[50],
         appBar: AppBar(
-          automaticallyImplyLeading: false, // Bloqueamos la flecha de atrás
+          title: const Text('Mis Solicitudes', style: TextStyle(fontWeight: FontWeight.bold)),
           backgroundColor: Colors.white,
+          foregroundColor: Colors.orange[800],
           elevation: 1,
-          title: const Text('Mis Solicitudes', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
-          centerTitle: true,
-          bottom: const TabBar(
-            labelColor: Colors.orange,
+          bottom: TabBar(
+            labelColor: Colors.orange[800],
             unselectedLabelColor: Colors.grey,
-            indicatorColor: Colors.orange,
-            indicatorWeight: 3,
-            tabs: [
-              Tab(text: 'Enviadas', icon: Icon(Icons.outbox)),
-              Tab(text: 'Recibidas', icon: Icon(Icons.move_to_inbox)),
+            indicatorColor: Colors.orange[800],
+            tabs: const [
+              Tab(text: 'LO QUE PEDÍ'), 
+              Tab(text: 'ME PIDIERON')
             ],
           ),
         ),
-        body: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 800), // Diseño responsivo para PC
-            child: TabBarView(
-              children: [
-                _buildListaSolicitudes(_solicitudesEnviadas, esEnviada: true),
-                _buildListaSolicitudes(_solicitudesRecibidas, esEnviada: false),
-              ],
-            ),
-          ),
-        ),
+        body: userId == null
+            ? const Center(child: Text('Inicia sesión para continuar'))
+            : TabBarView(
+                children: [
+                  // 1. Pestaña: Lo que yo pedí (Filtro por solicitanteID con D mayúscula)
+                  _solicitudesList(userId, 'solicitanteID', true),
+                  // 2. Pestaña: Lo que me pidieron (Filtro por dueñoId con Ñ)
+                  _solicitudesList(userId, 'dueñoId', false),
+                ],
+              ),
       ),
     );
   }
 
-  // Constructor de la lista (sirve para ambas pestañas)
-  Widget _buildListaSolicitudes(List<Map<String, dynamic>> solicitudes, {required bool esEnviada}) {
-    if (solicitudes.isEmpty) {
-      return const Center(
-        child: Text('No hay solicitudes aquí por ahora.', style: TextStyle(color: Colors.grey, fontSize: 16)),
-      );
-    }
+  Widget _solicitudesList(String uid, String campoFiltro, bool soyElQuePide) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('solicitudes')
+          .where(campoFiltro, isEqualTo: uid)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) return Center(child: Text('Error: ${snapshot.error}'));
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator(color: Colors.orange));
+        }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: solicitudes.length,
-      itemBuilder: (context, index) {
-        final item = solicitudes[index];
-        return Card(
-          elevation: 2,
-          margin: const EdgeInsets.only(bottom: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        final docs = snapshot.data!.docs;
+
+        if (docs.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Imagen del libro
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    item['imagen'],
-                    width: 70,
-                    height: 100,
-                    fit: BoxFit.cover,
+                Icon(Icons.inbox, size: 80, color: Colors.grey[300]),
+                const SizedBox(height: 10),
+                Text('No hay solicitudes aquí.', style: TextStyle(color: Colors.grey[500])),
+              ],
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(12),
+          itemCount: docs.length,
+          itemBuilder: (context, index) {
+            final data = docs[index].data() as Map<String, dynamic>;
+            final String solId = docs[index].id;
+            final String estado = data['estadoSolicitud'] ?? 'PENDIENTE';
+            final String libroId = data['libroId'] ?? '';
+
+            return Card(
+              elevation: 2,
+              margin: const EdgeInsets.only(bottom: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: const CircleAvatar(
+                      backgroundColor: Colors.orange,
+                      child: Icon(Icons.book, color: Colors.white),
+                    ),
+                    title: Text(data['tituloLibro'] ?? 'Sin título', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text('Estado: $estado'),
                   ),
-                ),
-                const SizedBox(width: 16),
-                
-                // Información del libro
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item['titulo'],
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        esEnviada ? 'Autor: ${item['autor']}' : 'Solicita: ${item['solicitante']}',
-                        style: TextStyle(color: Colors.grey[700], fontSize: 14),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Fecha: ${item['fecha']}',
-                        style: const TextStyle(color: Colors.grey, fontSize: 12),
-                      ),
-                      const SizedBox(height: 8),
-                      
-                      // Fila inferior: Estado y Botón de acción (si aplica)
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  
+                  // Si YO soy el dueño y la solicitud está PENDIENTE, muestro botones
+                  if (!soyElQuePide && estado == 'PENDIENTE')
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
                         children: [
-                          _buildBadgeEstado(item['estado']),
-                          
-                          // Si es una solicitud recibida y está pendiente, mostramos botones de acción
-                          if (!esEnviada && item['estado'] == 'Pendiente')
-                            TextButton(
-                              onPressed: () {
-                                // Lógica futura para aprobar/rechazar
-                              },
-                              child: const Text('Gestionar', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
-                            )
+                          TextButton(
+                            onPressed: () => _cambiarEstadoSolicitud(solId, 'RECHAZADA', libroId),
+                            child: const Text('RECHAZAR', style: TextStyle(color: Colors.red)),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton(
+                            onPressed: () => _cambiarEstadoSolicitud(solId, 'ACEPTADA', libroId),
+                            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                            child: const Text('ACEPTAR', style: TextStyle(color: Colors.white)),
+                          ),
                         ],
                       ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
+                    ),
+                  
+                  // Mensaje amigable si ya fue aceptada
+                  if (estado == 'ACEPTADA')
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 12),
+                      child: Text('✅ ¡Trato hecho! Pónganse en contacto.', 
+                        style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 12)),
+                    ),
+                ],
+              ),
+            );
+          },
         );
       },
-    );
-  }
-
-  // Widget para la etiqueta de color según el estado
-  Widget _buildBadgeEstado(String estado) {
-    Color bgColor;
-    Color textColor;
-
-    switch (estado) {
-      case 'Aprobada':
-        bgColor = Colors.green[100]!;
-        textColor = Colors.green[800]!;
-        break;
-      case 'Rechazada':
-        bgColor = Colors.red[100]!;
-        textColor = Colors.red[800]!;
-        break;
-      case 'Pendiente':
-      default:
-        bgColor = Colors.orange[100]!;
-        textColor = Colors.orange[800]!;
-        break;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        estado,
-        style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 12),
-      ),
     );
   }
 }

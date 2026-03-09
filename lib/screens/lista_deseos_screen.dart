@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class ListaDeseosScreen extends StatefulWidget {
-  const ListaDeseosScreen({Key? key}) : super(key: key);
+  const ListaDeseosScreen({super.key});
 
   @override
   State<ListaDeseosScreen> createState() => _ListaDeseosScreenState();
