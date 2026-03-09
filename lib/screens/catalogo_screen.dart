@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'publicacion_screen.dart';
 
 class CatalogoScreen extends StatefulWidget {
-  const CatalogoScreen({Key? key}) : super(key: key);
+  const CatalogoScreen({super.key});
 
   @override
   _CatalogoScreenState createState() => _CatalogoScreenState();
@@ -11,8 +10,8 @@ class CatalogoScreen extends StatefulWidget {
 
 class _CatalogoScreenState extends State<CatalogoScreen> {
   // Variables de los filtros (por ahora visuales, luego les daremos lógica)
-  String _filtroCarrera = 'Carrera (Todas)';
-  String _filtroMateria = 'Materia (Todas)';
+  final String _filtroCarrera = 'Carrera (Todas)';
+  final String _filtroMateria = 'Materia (Todas)';
 
   @override
   Widget build(BuildContext context) {

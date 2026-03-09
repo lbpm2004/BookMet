@@ -6,6 +6,8 @@ import 'catalogo_screen.dart';
 import 'mis_solicitudes_screen.dart';
 import 'publicar_screen.dart';
 import 'mis_publicaciones_screen.dart'; 
+import 'perfil_screen.dart';
+import 'lista_deseos_screen.dart'; // <-- ¡AQUÍ IMPORTAMOS LA NUEVA PANTALLA!
 
 class UsuarioScreen extends StatefulWidget {
   const UsuarioScreen({Key? key}) : super(key: key);
@@ -20,25 +22,34 @@ class _UsuarioScreenState extends State<UsuarioScreen> {
   
   int _indiceSeleccionado = 0; 
 
-  // Cambia el índice seleccionado cuando tocas un botón de la barra inferior
   void _onItemTapped(int index) {
     setState(() {
       _indiceSeleccionado = index;
     });
   }
 
-  // Cierra sesión y devuelve al usuario a la pantalla de login/bienvenida
   void _cerrarSesion() async {
     await _authService.cerrarSesion();
     if (!mounted) return;
     Navigator.pushReplacementNamed(context, '/login'); 
   }
 
-  // --- NUEVA VISTA DE INICIO (Index 0) ---
+  // Función para dar/quitar like a un libro
+  void _alternarFavorito(String pubId, bool esFavorito) async {
+    final docRef = FirebaseFirestore.instance.collection('usuarios').doc(user!.uid);
+    if (esFavorito) {
+      // Si ya es favorito, lo quitamos
+      await docRef.update({'favoritos': FieldValue.arrayRemove([pubId])});
+    } else {
+      // Si no es favorito, lo agregamos
+      await docRef.update({'favoritos': FieldValue.arrayUnion([pubId])});
+    }
+  }
+
+  // --- VISTA DE INICIO (CON CORAZONCITOS) ---
   Widget _construirVistaInicio() {
     return Column(
       children: [
-        // 1. Barra de Búsqueda
         Padding(
           padding: const EdgeInsets.all(16.0),
           child: TextField(
@@ -46,90 +57,92 @@ class _UsuarioScreenState extends State<UsuarioScreen> {
               hintText: '¿Buscas un libro en concreto? Empieza buscando aquí',
               hintStyle: const TextStyle(fontSize: 14),
               prefixIcon: const Icon(Icons.search, color: Colors.orange),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(30),
-                borderSide: BorderSide.none,
-              ),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
               filled: true,
               fillColor: Colors.grey[200],
             ),
-            onSubmitted: (value) {
-              // Aquí en el futuro puedes hacer que al buscar lo mande al Catálogo con el filtro
-            },
           ),
         ),
         
-        // 2. Título de la sección
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
           child: Align(
             alignment: Alignment.centerLeft,
-            child: Text(
-              'Últimas publicaciones',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
+            child: Text('Últimas publicaciones', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
           ),
         ),
 
-        // 3. Lista de los últimos 15 libros
         Expanded(
-          child: StreamBuilder<QuerySnapshot>(
-            // Consulta a Firestore: Trae 15 documentos de la colección 'publicaciones'
-            // (Si tienes un campo de fecha de creación, podrías agregar .orderBy('fecha', descending: true) antes del limit)
-            stream: FirebaseFirestore.instance.collection('publicaciones').limit(15).snapshots(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator(color: Colors.orange));
-              }
-              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                return const Center(child: Text('Aún no hay publicaciones en la app.'));
-              }
+          // 1. PRIMERO ESCUCHAMOS AL USUARIO (Para saber cuáles son sus favoritos en tiempo real)
+          child: StreamBuilder<DocumentSnapshot>(
+            stream: FirebaseFirestore.instance.collection('usuarios').doc(user!.uid).snapshots(),
+            builder: (context, userSnapshot) {
+              if (!userSnapshot.hasData) return const Center(child: CircularProgressIndicator(color: Colors.orange));
+              
+              // Extraemos la lista de favoritos (si no existe, creamos una lista vacía)
+              List<dynamic> misFavoritos = userSnapshot.data!.data().toString().contains('favoritos') 
+                  ? userSnapshot.data!.get('favoritos') 
+                  : [];
 
-              // Construimos la lista con las tarjetas de los libros
-              return ListView.builder(
-                itemCount: snapshot.data!.docs.length,
-                itemBuilder: (context, index) {
-                  var publicacion = snapshot.data!.docs[index].data() as Map<String, dynamic>;
-                  
-                  // NOTA: Ajusta 'titulo' y 'autor' si tus campos en Firebase se llaman distinto
-                  String titulo = publicacion['titulo'] ?? 'Sin título';
-                  String autor = publicacion['autor'] ?? 'Autor desconocido';
+              // 2. LUEGO ESCUCHAMOS LOS LIBROS
+              return StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance.collection('publicaciones').limit(15).snapshots(),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                    return const Center(child: Text('Aún no hay publicaciones en la app.'));
+                  }
 
-                  return Card(
-                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                    elevation: 2,
-                    child: ListTile(
-                      leading: const CircleAvatar(
-                        backgroundColor: Colors.orangeAccent,
-                        child: Icon(Icons.book, color: Colors.white),
-                      ),
-                      title: Text(titulo, style: const TextStyle(fontWeight: FontWeight.bold)),
-                      subtitle: Text(autor),
-                      trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
-                    ),
+                  return ListView.builder(
+                    itemCount: snapshot.data!.docs.length,
+                    itemBuilder: (context, index) {
+                      var doc = snapshot.data!.docs[index];
+                      var publicacion = doc.data() as Map<String, dynamic>;
+                      String pubId = doc.id; // ¡Necesitamos el ID del libro!
+                      String titulo = publicacion['titulo'] ?? 'Sin título';
+                      String autor = publicacion['autor'] ?? 'Autor desconocido';
+
+                      // Comprobamos si este libro está en mi lista
+                      bool esFavorito = misFavoritos.contains(pubId);
+
+                      return Card(
+                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        child: ListTile(
+                          leading: const CircleAvatar(
+                            backgroundColor: Colors.orangeAccent,
+                            child: Icon(Icons.book, color: Colors.white),
+                          ),
+                          title: Text(titulo, style: const TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: Text(autor),
+                          // EL BOTÓN DEL CORAZÓN
+                          trailing: IconButton(
+                            icon: Icon(
+                              esFavorito ? Icons.favorite : Icons.favorite_border,
+                              color: esFavorito ? Colors.red : Colors.grey,
+                            ),
+                            onPressed: () => _alternarFavorito(pubId, esFavorito),
+                          ),
+                        ),
+                      );
+                    },
                   );
                 },
               );
-            },
+            }
           ),
         ),
       ],
     );
   }
 
-  // Decide qué "cuerpo" mostrar según el botón
   Widget _obtenerCuerpoPantalla() {
     switch (_indiceSeleccionado) {
-      case 0:
-        return _construirVistaInicio(); // Tu nueva pantalla de bienvenida interactiva
-      case 1:
-        return const CatalogoScreen(); 
-      case 2:
-        return const PublicarScreen();
-      case 3:
-        return const MisSolicitudesScreen(); 
-      default:
-        return _construirVistaInicio();
+      case 0: return _construirVistaInicio();
+      case 1: return const CatalogoScreen(); 
+      case 2: return const PublicarScreen();
+      case 3: return const MisSolicitudesScreen(); 
+      default: return _construirVistaInicio();
     }
   }
 
@@ -143,18 +156,14 @@ class _UsuarioScreenState extends State<UsuarioScreen> {
         elevation: 1,
       ),
       
-      // --- MENÚ LATERAL (DRAWER) ---
       drawer: Drawer(
         child: user == null
             ? const Center(child: Text('No hay usuario activo'))
-            : FutureBuilder<DocumentSnapshot>(
-                future: FirebaseFirestore.instance.collection('usuarios').doc(user!.uid).get(),
+            : StreamBuilder<DocumentSnapshot>( 
+                stream: FirebaseFirestore.instance.collection('usuarios').doc(user!.uid).snapshots(),
                 builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator(color: Colors.orange));
-                  }
                   if (!snapshot.hasData || !snapshot.data!.exists) {
-                    return const Center(child: Text('Error al cargar datos del perfil'));
+                    return const Center(child: CircularProgressIndicator(color: Colors.orange));
                   }
 
                   var userData = snapshot.data!.data() as Map<String, dynamic>;
@@ -171,35 +180,48 @@ class _UsuarioScreenState extends State<UsuarioScreen> {
                         decoration: BoxDecoration(color: Colors.orange[800]),
                         accountName: Row(
                           children: [
-                            Flexible(
-                              child: Text(
-                                '$nombre $apellido', 
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
+                            Flexible(child: Text('$nombre $apellido', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18), overflow: TextOverflow.ellipsis)),
                             const SizedBox(width: 10),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.25), 
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.white.withOpacity(0.6)),
-                              ),
-                              child: Text(
-                                rol, 
-                                style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5),
-                              ),
+                              decoration: BoxDecoration(color: Colors.white.withOpacity(0.25), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white.withOpacity(0.6))),
+                              child: Text(rol, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
                             ),
                           ],
                         ),
                         accountEmail: Text(email),
-                        currentAccountPicture: CircleAvatar(
-                          backgroundColor: Colors.white,
-                          backgroundImage: fotoUrl.isNotEmpty ? NetworkImage(fotoUrl) : null,
-                          child: fotoUrl.isEmpty ? Icon(Icons.person, size: 40, color: Colors.orange[300]) : null,
+                        currentAccountPicture: Material(
+                          color: Colors.transparent, 
+                          child: InkWell(
+                            customBorder: const CircleBorder(), 
+                            splashColor: Colors.white.withOpacity(0.5), 
+                            highlightColor: Colors.orange.withOpacity(0.3), 
+                            onTap: () {
+                              Navigator.pop(context); 
+                              Navigator.push(context, MaterialPageRoute(builder: (context) => const PerfilScreen()));
+                            },
+                            child: Container(
+                              decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2)),
+                              child: CircleAvatar(
+                                backgroundColor: Colors.white,
+                                backgroundImage: fotoUrl.isNotEmpty ? NetworkImage(fotoUrl) : null,
+                                child: fotoUrl.isEmpty ? Icon(Icons.person, size: 40, color: Colors.orange[300]) : null,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
+                      
+                      // NUEVO BOTÓN: LISTA DE DESEOS ❤️
+                      ListTile(
+                        leading: const Icon(Icons.favorite, color: Colors.redAccent),
+                        title: const Text('Mi Lista de Deseos'),
+                        onTap: () {
+                          Navigator.pop(context); 
+                          Navigator.push(context, MaterialPageRoute(builder: (context) => const ListaDeseosScreen()));
+                        },
+                      ),
+                      
                       ListTile(
                         leading: const Icon(Icons.book, color: Colors.orange),
                         title: const Text('Mis Publicaciones'),
@@ -213,18 +235,14 @@ class _UsuarioScreenState extends State<UsuarioScreen> {
                         title: const Text('Intercambios y Solicitudes'),
                         onTap: () {
                           Navigator.pop(context);
-                          setState(() {
-                            _indiceSeleccionado = 3; 
-                          });
+                          setState(() => _indiceSeleccionado = 3);
                         },
                       ),
                       const Divider(),
                       ListTile(
                         leading: const Icon(Icons.settings, color: Colors.grey),
                         title: const Text('Configuración'),
-                        onTap: () {
-                           Navigator.pop(context);
-                        },
+                        onTap: () => Navigator.pop(context),
                       ),
                       const SizedBox(height: 20),
                       ListTile(
@@ -249,22 +267,10 @@ class _UsuarioScreenState extends State<UsuarioScreen> {
         elevation: 8,
         type: BottomNavigationBarType.fixed, 
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Inicio',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.menu_book),
-            label: 'Catálogo',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.add_circle_outline),
-            label: 'Publicar',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.list_alt), 
-            label: 'Solicitudes',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Inicio'),
+          BottomNavigationBarItem(icon: Icon(Icons.menu_book), label: 'Catálogo'),
+          BottomNavigationBarItem(icon: Icon(Icons.add_circle_outline), label: 'Publicar'),
+          BottomNavigationBarItem(icon: Icon(Icons.list_alt), label: 'Solicitudes'),
         ],
       ),
     );

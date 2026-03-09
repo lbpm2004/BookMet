@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class MisSolicitudesScreen extends StatefulWidget {
-  const MisSolicitudesScreen({Key? key}) : super(key: key);
+  const MisSolicitudesScreen({super.key});
 
   @override
   _MisSolicitudesScreenState createState() => _MisSolicitudesScreenState();
