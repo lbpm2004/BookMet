@@ -154,6 +154,27 @@ class _UsuarioScreenState extends State<UsuarioScreen> {
         backgroundColor: Colors.white,
         foregroundColor: Colors.orange[800],
         elevation: 1,
+        actions: [
+          TextButton.icon(
+            onPressed: () {
+              // Navega a la pantalla de donación que creamos anteriormente
+              Navigator.pushNamed(context, '/donar');
+            },
+            icon: const Icon(Icons.favorite, color: Colors.orange, size: 20),
+            label: const Text(
+              'DONAR',
+              style: TextStyle(
+                color: Colors.orange,
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
+            ),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+            ),
+          ),
+          const SizedBox(width: 8), // Espaciado final
+        ],
       ),
       
       drawer: Drawer(
