@@ -10,11 +10,9 @@ class CatalogoScreen extends StatefulWidget {
 }
 
 class _CatalogoScreenState extends State<CatalogoScreen> {
-  // 1. Filtros y estados
   String _filtroCarrera = 'Carreras (Todas)';
   String _filtroMateria = 'Materias (Todas)';
   
-  // 2. Filtros de orden separados
   String _filtroAlfa = 'Alfabético (-)'; 
   String _filtroTiempo = 'Más Recientes';
   
@@ -49,7 +47,6 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
                 ),
                 const SizedBox(height: 12),
                 
-                // Filtros horizontales
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
@@ -66,7 +63,6 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
                         onChanged: (val) => setState(() => _filtroMateria = val!),
                       ),
                       const SizedBox(width: 8),
-                      // Nuevo filtro separado: Alfabético
                       _buildFiltro(
                         value: _filtroAlfa,
                         items: _opcionesAlfa,
@@ -77,14 +73,12 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
                         },
                       ),
                       const SizedBox(width: 8),
-                      // Nuevo filtro separado: Tiempo
                       _buildFiltro(
                         value: _filtroTiempo,
                         items: _opcionesTiempo,
                         onChanged: (val) {
                           setState(() {
                             _filtroTiempo = val!;
-                            // Opcional: Si eligen tiempo, reseteamos el alfabético para no confundir la vista
                             if (val != 'Más Recientes' || val == 'Más Recientes') {
                                _filtroAlfa = 'Alfabético (-)';
                             }
@@ -101,16 +95,17 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
           // GRILLA DE LIBROS
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
+              // --- CAMBIO PRINCIPAL AQUÍ: ACEPTAMOS DISPONIBLES Y RESERVADOS ---
               stream: FirebaseFirestore.instance
                   .collection('publicaciones')
-                  .where('estado', isEqualTo: 'DISPONIBLE')
+                  .where('estado', whereIn: ['DISPONIBLE', 'RESERVADO'])
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator(color: Colors.orange));
                 }
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const Center(child: Text('No hay libros disponibles.'));
+                  return const Center(child: Text('No hay libros en el catálogo en este momento.'));
                 }
 
                 // Filtrado por búsqueda, carrera y materia
@@ -128,12 +123,11 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
                   return pasaBusqueda && pasaCarrera && pasaMateria;
                 }).toList();
 
-                // NUEVA LÓGICA DE ORDENAMIENTO (ALFABÉTICO VS TIEMPO CON fechaPublicacion)
+                // Lógica de Ordenamiento
                 libros.sort((a, b) {
                   var dataA = a.data() as Map<String, dynamic>;
                   var dataB = b.data() as Map<String, dynamic>;
                   
-                  // 1. Si hay orden alfabético activo, lo priorizamos
                   if (_filtroAlfa != 'Alfabético (-)') {
                     String tituloA = (dataA['titulo'] ?? '').toString().toLowerCase();
                     String tituloB = (dataB['titulo'] ?? '').toString().toLowerCase();
@@ -141,19 +135,16 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
                     if (_filtroAlfa == 'Z-A') return tituloB.compareTo(tituloA);
                   }
 
-                  // 2. Si no hay orden alfabético, usamos fechaPublicacion
                   Timestamp? fechaA = dataA['fechaPublicacion'] as Timestamp?;
                   Timestamp? fechaB = dataB['fechaPublicacion'] as Timestamp?;
 
-                  // Prevención de errores por si algún documento viejo no tiene fecha
                   if (fechaA == null && fechaB == null) return 0;
-                  if (fechaA == null) return 1; // Los nulos van al final
+                  if (fechaA == null) return 1; 
                   if (fechaB == null) return -1;
 
                   if (_filtroTiempo == 'Más Antiguos') {
                     return fechaA.compareTo(fechaB);
                   } else { 
-                    // 'Más Recientes'
                     return fechaB.compareTo(fechaA);
                   }
                 });
@@ -174,15 +165,27 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
                     return _HoverBookCard(
                       libroData: libroData,
                       onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => DetalleLibroScreen(
-                              libro: libroData, 
-                              docId: idDoc,
+                        // Si está reservado, mostramos un aviso en lugar de abrir el detalle
+                        if (libroData['estado'] == 'RESERVADO') {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Este libro ya se encuentra reservado por otro usuario.'),
+                              backgroundColor: Colors.grey,
+                              duration: Duration(seconds: 2),
+                            )
+                          );
+                        } else {
+                          // Si está disponible, abrimos la pantalla normal
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => DetalleLibroScreen(
+                                libro: libroData, 
+                                docId: idDoc,
+                              ),
                             ),
-                          ),
-                        );
+                          );
+                        }
                       },
                     );
                   },
@@ -227,9 +230,12 @@ class _HoverBookCardState extends State<_HoverBookCard> {
 
   @override
   Widget build(BuildContext context) {
+    bool esReservado = widget.libroData['estado'] == 'RESERVADO';
+
     return MouseRegion(
-      cursor: SystemMouseCursors.click, 
-      onEnter: (_) => setState(() => _isHovering = true),
+      // Si está reservado, quitamos la manito de click para indicar que no está disponible
+      cursor: esReservado ? SystemMouseCursors.basic : SystemMouseCursors.click, 
+      onEnter: (_) => setState(() => _isHovering = !esReservado), // No hace hover si está reservado
       onExit: (_) => setState(() => _isHovering = false),
       child: GestureDetector(
         onTap: widget.onTap,
@@ -249,37 +255,70 @@ class _HoverBookCardState extends State<_HoverBookCard> {
                 )
               ],
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Stack( // Usamos Stack para poder poner el aviso de "RESERVADO" encima
               children: [
-                Expanded(
-                  child: ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                    child: Image.network(
-                      widget.libroData['fotoUrl'] ?? 'https://via.placeholder.com/150',
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => const Icon(Icons.book, size: 50, color: Colors.grey),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                        // Si está reservado, le bajamos la opacidad a la imagen
+                        child: Opacity(
+                          opacity: esReservado ? 0.5 : 1.0,
+                          child: Image.network(
+                            widget.libroData['fotoUrl'] ?? 'https://via.placeholder.com/150',
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => const Icon(Icons.book, size: 50, color: Colors.grey),
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Text(
+                        widget.libroData['titulo'] ?? 'Sin título',
+                        style: TextStyle(
+                          fontSize: 12, 
+                          fontWeight: FontWeight.bold,
+                          color: esReservado ? Colors.grey : Colors.black // Texto gris si está reservado
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (widget.libroData['autor'] != null)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8.0).copyWith(bottom: 8.0),
+                        child: Text(
+                          widget.libroData['autor'],
+                          style: TextStyle(fontSize: 10, color: Colors.grey[500]),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                  ],
                 ),
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Text(
-                    widget.libroData['titulo'] ?? 'Sin título',
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                if (widget.libroData['autor'] != null)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8.0).copyWith(bottom: 8.0),
-                    child: Text(
-                      widget.libroData['autor'],
-                      style: TextStyle(fontSize: 10, color: Colors.grey[700]),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                
+                // --- ETIQUETA VISUAL DE RESERVADO ---
+                if (esReservado)
+                  Positioned(
+                    top: 10,
+                    right: 0,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[800],
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(8),
+                          bottomLeft: Radius.circular(8),
+                        ),
+                      ),
+                      child: const Text(
+                        'RESERVADO',
+                        style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                      ),
                     ),
                   ),
               ],

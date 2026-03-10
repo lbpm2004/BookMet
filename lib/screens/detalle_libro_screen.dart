@@ -32,113 +32,84 @@ class DetalleLibroScreen extends StatelessWidget {
         builder: (ctx) => const Center(child: CircularProgressIndicator(color: Colors.orange)),
       );
 
-      // 1. Guardar la solicitud
-     await FirebaseFirestore.instance.collection('solicitudes').add({
-  'libroId': docId,
-  'tituloLibro': libro['titulo'] ?? 'Sin título',
-  'fotoLibro': libro['fotoUrl'] ?? '',
-  'solicitanteID': user.uid,        // ID del que está logueado (TÚ)
-  'dueñoId': libro['usuarioId'],    // ID del que subió el libro (EL OTRO)
-  'estadoSolicitud': 'PENDIENTE',
-  'fechaSolicitud': FieldValue.serverTimestamp(),
-});
+      // 1. Guardar la solicitud con los nombres EXACTOS que busca "Mis Solicitudes"
+      await FirebaseFirestore.instance.collection('solicitudes').add({
+        'libroId': docId,
+        'tituloLibro': libro['titulo'] ?? 'Libro sin título',
+        'solicitanteId': user.uid,     // <-- Nombre corregido
+        'duenoId': duenoId,            // <-- Nombre corregido
+        'estadoSolicitud': 'PENDIENTE',// <-- Nombre corregido
+        'fecha': FieldValue.serverTimestamp(),
+      });
 
-      // 2. Cambiar estado del libro
+      // 2. Cambiar el estado del libro a RESERVADO (¡Ya no a NO_DISPONIBLE!)
       await FirebaseFirestore.instance.collection('publicaciones').doc(docId).update({
-        'estado': 'NO DISPONIBLE',
+        'estado': 'RESERVADO',
       });
 
       if (!context.mounted) return;
-      Navigator.pop(context); // Quitar carga
+      Navigator.pop(context); // Cierra el diálogo de carga
+      Navigator.pop(context); // Te regresa a la pantalla anterior (Catálogo)
 
-      // Diálogo de éxito
-      showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('¡Solicitud enviada!'),
-          content: const Text('Podrás ver el seguimiento en la sección "Mis Solicitudes".'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(ctx);
-                Navigator.pop(context);
-              },
-              child: const Text('OK', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
-            )
-          ],
-        ),
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('¡Solicitud enviada con éxito!'), 
+          backgroundColor: Colors.green
+        )
       );
 
     } catch (e) {
       if (!context.mounted) return;
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al solicitar: $e'), backgroundColor: Colors.red)
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Validamos el estado y la propiedad
-    bool disponible = (libro['estado']?.toString().toUpperCase() == 'DISPONIBLE');
-    bool esMio = libro['usuarioId'] == FirebaseAuth.instance.currentUser?.uid;
-    
-    // CORRECCIÓN DEL ERROR DE IMAGEN:
-    // Verificamos si la URL existe y no está vacía antes de intentar cargarla
-    String? urlImagen = libro['fotoUrl'];
-    bool tieneImagenValida = urlImagen != null && urlImagen.isNotEmpty && urlImagen.startsWith('http');
+    final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+    final bool esMio = libro['usuarioId'] == currentUserId;
+    final bool disponible = libro['estado'] == 'DISPONIBLE';
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Detalles del Libro'),
+        title: const Text('Detalle del Libro', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.white,
         foregroundColor: Colors.orange[800],
         elevation: 1,
       ),
       body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Contenedor de imagen con protección contra nulos
-            Container(
-              height: 300,
-              width: double.infinity,
-              color: Colors.grey[200],
-              child: tieneImagenValida
-                  ? Image.network(
-                      urlImagen,
-                      fit: BoxFit.contain,
-                      // Si la URL falla al cargar (error 404, etc)
-                      errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, size: 100, color: Colors.grey),
-                    )
-                  : const Icon(Icons.book, size: 100, color: Colors.grey), // Imagen por defecto si es nulo
-            ),
-            
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    libro['titulo'] ?? 'Sin título',
-                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Autor: ${libro['autor'] ?? 'Desconocido'}',
-                    style: TextStyle(fontSize: 16, color: Colors.grey[700]),
-                  ),
-                  const Divider(height: 30),
-                  _datoFila(Icons.school, 'Carrera', libro['carrera']),
-                  _datoFila(Icons.bookmark, 'Materia', libro['materia']),
-                  _datoFila(Icons.star, 'Estado físico', libro['estadoFisico']),
-                  const SizedBox(height: 20),
-                  const Text('DESCRIPCIÓN', style: TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  Text(libro['descripcion'] ?? 'No hay descripción disponible.'),
-                  const SizedBox(height: 100),
-                ],
+            Center(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  libro['fotoUrl'] ?? 'https://via.placeholder.com/150',
+                  height: 250,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.book, size: 100, color: Colors.grey),
+                ),
               ),
             ),
+            const SizedBox(height: 20),
+            Text(
+              libro['titulo'] ?? 'Sin título',
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            _datoFila(Icons.person, 'Autor', libro['autor']),
+            _datoFila(Icons.school, 'Carrera', libro['carrera']),
+            _datoFila(Icons.menu_book, 'Materia', libro['materia']),
+            _datoFila(Icons.info_outline, 'Estado Físico', libro['estadoFisico']?.toString().replaceAll('_', ' ').toUpperCase()),
+            const SizedBox(height: 20),
+            const Text('Descripción', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Text(libro['descripcion'] ?? 'No hay descripción disponible.', style: const TextStyle(fontSize: 16)),
           ],
         ),
       ),
@@ -153,12 +124,12 @@ class DetalleLibroScreen extends StatelessWidget {
             : ElevatedButton(
                 onPressed: disponible ? () => _solicitarLibro(context) : null,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange[800],
+                  backgroundColor: disponible ? Colors.orange[800] : Colors.grey,
                   padding: const EdgeInsets.symmetric(vertical: 15),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))
                 ),
                 child: Text(
-                  disponible ? 'SOLICITAR INTERCAMBIO' : 'NO DISPONIBLE',
+                  disponible ? 'SOLICITAR INTERCAMBIO' : (libro['estado'] == 'RESERVADO' ? 'RESERVADO' : 'NO DISPONIBLE'),
                   style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                 ),
               ),
@@ -170,11 +141,12 @@ class DetalleLibroScreen extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(icono, size: 18, color: Colors.orange[800]),
           const SizedBox(width: 8),
           Text('$titulo: ', style: const TextStyle(fontWeight: FontWeight.bold)),
-          Text(valor?.toString() ?? 'N/A'),
+          Expanded(child: Text(valor?.toString() ?? 'N/A')),
         ],
       ),
     );
