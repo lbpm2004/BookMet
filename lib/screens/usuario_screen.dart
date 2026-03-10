@@ -7,7 +7,7 @@ import 'mis_solicitudes_screen.dart';
 import 'publicar_screen.dart';
 import 'mis_publicaciones_screen.dart'; 
 import 'perfil_screen.dart';
-import 'lista_deseos_screen.dart'; // <-- ¡AQUÍ IMPORTAMOS LA NUEVA PANTALLA!
+import 'lista_deseos_screen.dart';
 
 class UsuarioScreen extends StatefulWidget {
   const UsuarioScreen({super.key});
@@ -20,6 +20,7 @@ class _UsuarioScreenState extends State<UsuarioScreen> {
   final User? user = FirebaseAuth.instance.currentUser;
   final AuthService _authService = AuthService();
   
+  // El índice 0 ahora será el Catálogo
   int _indiceSeleccionado = 0; 
 
   void _onItemTapped(int index) {
@@ -34,121 +35,20 @@ class _UsuarioScreenState extends State<UsuarioScreen> {
     Navigator.pushReplacementNamed(context, '/login'); 
   }
 
-  // Función para dar/quitar like a un libro
-  void _alternarFavorito(String pubId, bool esFavorito) async {
-    final docRef = FirebaseFirestore.instance.collection('usuarios').doc(user!.uid);
-    if (esFavorito) {
-      // Si ya es favorito, lo quitamos
-      await docRef.update({'favoritos': FieldValue.arrayRemove([pubId])});
-    } else {
-      // Si no es favorito, lo agregamos
-      await docRef.update({'favoritos': FieldValue.arrayUnion([pubId])});
-    }
-  }
-
-  // --- VISTA DE INICIO (CON CORAZONCITOS) ---
-  Widget _construirVistaInicio() {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: TextField(
-            decoration: InputDecoration(
-              hintText: '¿Buscas un libro en concreto? Empieza buscando aquí',
-              hintStyle: const TextStyle(fontSize: 14),
-              prefixIcon: const Icon(Icons.search, color: Colors.orange),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
-              filled: true,
-              fillColor: Colors.grey[200],
-            ),
-          ),
-        ),
-        
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Text('Últimas publicaciones', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-          ),
-        ),
-
-        Expanded(
-          // 1. PRIMERO ESCUCHAMOS AL USUARIO (Para saber cuáles son sus favoritos en tiempo real)
-          child: StreamBuilder<DocumentSnapshot>(
-            stream: FirebaseFirestore.instance.collection('usuarios').doc(user!.uid).snapshots(),
-            builder: (context, userSnapshot) {
-              if (!userSnapshot.hasData) return const Center(child: CircularProgressIndicator(color: Colors.orange));
-              
-              // Extraemos la lista de favoritos (si no existe, creamos una lista vacía)
-              List<dynamic> misFavoritos = userSnapshot.data!.data().toString().contains('favoritos') 
-                  ? userSnapshot.data!.get('favoritos') 
-                  : [];
-
-              // 2. LUEGO ESCUCHAMOS LOS LIBROS
-              return StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance.collection('publicaciones').limit(15).snapshots(),
-                builder: (context, snapshot) {
-                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                    return const Center(child: Text('Aún no hay publicaciones en la app.'));
-                  }
-
-                  return ListView.builder(
-                    itemCount: snapshot.data!.docs.length,
-                    itemBuilder: (context, index) {
-                      var doc = snapshot.data!.docs[index];
-                      var publicacion = doc.data() as Map<String, dynamic>;
-                      String pubId = doc.id; // ¡Necesitamos el ID del libro!
-                      String titulo = publicacion['titulo'] ?? 'Sin título';
-                      String autor = publicacion['autor'] ?? 'Autor desconocido';
-
-                      // Comprobamos si este libro está en mi lista
-                      bool esFavorito = misFavoritos.contains(pubId);
-
-                      return Card(
-                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                        elevation: 2,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        child: ListTile(
-                          leading: const CircleAvatar(
-                            backgroundColor: Colors.orangeAccent,
-                            child: Icon(Icons.book, color: Colors.white),
-                          ),
-                          title: Text(titulo, style: const TextStyle(fontWeight: FontWeight.bold)),
-                          subtitle: Text(autor),
-                          // EL BOTÓN DEL CORAZÓN
-                          trailing: IconButton(
-                            icon: Icon(
-                              esFavorito ? Icons.favorite : Icons.favorite_border,
-                              color: esFavorito ? Colors.red : Colors.grey,
-                            ),
-                            onPressed: () => _alternarFavorito(pubId, esFavorito),
-                          ),
-                        ),
-                      );
-                    },
-                  );
-                },
-              );
-            }
-          ),
-        ),
-      ],
-    );
-  }
-
+  // Cuerpo dinámico: Índice 0: Catálogo, Índice 1: Publicar, Índice 2: Solicitudes
   Widget _obtenerCuerpoPantalla() {
     switch (_indiceSeleccionado) {
-      case 0: return _construirVistaInicio();
-      case 1: return const CatalogoScreen(); 
-      case 2: return const PublicarScreen();
-      case 3: return const MisSolicitudesScreen(); 
-      default: return _construirVistaInicio();
+      case 0: return const CatalogoScreen(); 
+      case 1: return const PublicarScreen();
+      case 2: return const MisSolicitudesScreen(); 
+      default: return const CatalogoScreen();
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // --- TU APPBAR ORIGINAL INTACATA ---
       appBar: AppBar(
         title: const Text('BookMet', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.white,
@@ -157,7 +57,6 @@ class _UsuarioScreenState extends State<UsuarioScreen> {
         actions: [
           TextButton.icon(
             onPressed: () {
-              // Navega a la pantalla de donación que creamos anteriormente
               Navigator.pushNamed(context, '/donar');
             },
             icon: const Icon(Icons.favorite, color: Colors.orange, size: 20),
@@ -173,10 +72,11 @@ class _UsuarioScreenState extends State<UsuarioScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 12),
             ),
           ),
-          const SizedBox(width: 8), // Espaciado final
+          const SizedBox(width: 8), 
         ],
       ),
       
+      // --- TU MENÚ LATERAL (DRAWER) ORIGINAL INTACTO ---
       drawer: Drawer(
         child: user == null
             ? const Center(child: Text('No hay usuario activo'))
@@ -233,7 +133,6 @@ class _UsuarioScreenState extends State<UsuarioScreen> {
                         ),
                       ),
                       
-                      // NUEVO BOTÓN: LISTA DE DESEOS ❤️
                       ListTile(
                         leading: const Icon(Icons.favorite, color: Colors.redAccent),
                         title: const Text('Mi Lista de Deseos'),
@@ -256,7 +155,8 @@ class _UsuarioScreenState extends State<UsuarioScreen> {
                         title: const Text('Intercambios y Solicitudes'),
                         onTap: () {
                           Navigator.pop(context);
-                          setState(() => _indiceSeleccionado = 3);
+                          // En la nueva estructura, Solicitudes es el índice 2
+                          setState(() => _indiceSeleccionado = 2);
                         },
                       ),
                       const Divider(),
@@ -279,6 +179,7 @@ class _UsuarioScreenState extends State<UsuarioScreen> {
       
       body: _obtenerCuerpoPantalla(),
       
+      // --- BARRA INFERIOR MODIFICADA (Solo 3 botones) ---
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _indiceSeleccionado,
         onTap: _onItemTapped,
@@ -288,7 +189,6 @@ class _UsuarioScreenState extends State<UsuarioScreen> {
         elevation: 8,
         type: BottomNavigationBarType.fixed, 
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Inicio'),
           BottomNavigationBarItem(icon: Icon(Icons.menu_book), label: 'Catálogo'),
           BottomNavigationBarItem(icon: Icon(Icons.add_circle_outline), label: 'Publicar'),
           BottomNavigationBarItem(icon: Icon(Icons.list_alt), label: 'Solicitudes'),

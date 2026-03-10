@@ -20,7 +20,7 @@ class AuthService {
     try {
       String fotoUrl = '';
 
-      // 1. Subir a Supabase (LA LÓGICA SE MUDÓ AQUÍ)
+      // 1. Subir a Supabase
       if (fotoBytes != null) {
         final String nombreArchivo = '${DateTime.now().millisecondsSinceEpoch}.jpg';
         await _supabase.storage.from('perfiles').uploadBinary(
