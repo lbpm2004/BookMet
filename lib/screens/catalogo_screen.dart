@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'detalle_libro_screen.dart'; // Asegúrate de que este archivo se llame así en tu carpeta
+import 'detalle_libro_screen.dart';
 
 class CatalogoScreen extends StatefulWidget {
   const CatalogoScreen({super.key});
@@ -10,12 +10,20 @@ class CatalogoScreen extends StatefulWidget {
 }
 
 class _CatalogoScreenState extends State<CatalogoScreen> {
-  String _filtroCarrera = 'Todas';
-  String _filtroMateria = 'Todas';
+  // 1. Filtros y estados
+  String _filtroCarrera = 'Carreras (Todas)';
+  String _filtroMateria = 'Materias (Todas)';
+  
+  // 2. Filtros de orden separados
+  String _filtroAlfa = 'Alfabético (-)'; 
+  String _filtroTiempo = 'Más Recientes';
+  
   String _busqueda = ''; 
 
-  final List<String> _carreras = ['Todas', 'Ingenieria', 'Psicologia', 'Derecho', 'Administracion'];
-  final List<String> _materias = ['Todas', 'Matemáticas 1', 'Matemáticas 2', 'Matemáticas 5', 'Física'];
+  final List<String> _carreras = ['Carreras (Todas)', 'Ingenieria', 'Psicologia', 'Derecho', 'Administracion'];
+  final List<String> _materias = ['Materias (Todas)', 'Matemáticas 1', 'Matemáticas 2', 'Matemáticas 5', 'Física'];
+  final List<String> _opcionesAlfa = ['Alfabético (-)', 'A-Z', 'Z-A'];
+  final List<String> _opcionesTiempo = ['Más Recientes', 'Más Antiguos'];
 
   @override
   Widget build(BuildContext context) {
@@ -40,20 +48,51 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                Row(
-                  children: [
-                    _buildFiltro(
-                      value: _filtroCarrera,
-                      items: _carreras,
-                      onChanged: (val) => setState(() => _filtroCarrera = val!),
-                    ),
-                    const SizedBox(width: 8),
-                    _buildFiltro(
-                      value: _filtroMateria,
-                      items: _materias,
-                      onChanged: (val) => setState(() => _filtroMateria = val!),
-                    ),
-                  ],
+                
+                // Filtros horizontales
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _buildFiltro(
+                        value: _filtroCarrera,
+                        items: _carreras,
+                        onChanged: (val) => setState(() => _filtroCarrera = val!),
+                      ),
+                      const SizedBox(width: 8),
+                      _buildFiltro(
+                        value: _filtroMateria,
+                        items: _materias,
+                        onChanged: (val) => setState(() => _filtroMateria = val!),
+                      ),
+                      const SizedBox(width: 8),
+                      // Nuevo filtro separado: Alfabético
+                      _buildFiltro(
+                        value: _filtroAlfa,
+                        items: _opcionesAlfa,
+                        onChanged: (val) {
+                          setState(() {
+                            _filtroAlfa = val!;
+                          });
+                        },
+                      ),
+                      const SizedBox(width: 8),
+                      // Nuevo filtro separado: Tiempo
+                      _buildFiltro(
+                        value: _filtroTiempo,
+                        items: _opcionesTiempo,
+                        onChanged: (val) {
+                          setState(() {
+                            _filtroTiempo = val!;
+                            // Opcional: Si eligen tiempo, reseteamos el alfabético para no confundir la vista
+                            if (val != 'Más Recientes' || val == 'Más Recientes') {
+                               _filtroAlfa = 'Alfabético (-)';
+                            }
+                          });
+                        },
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -74,6 +113,7 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
                   return const Center(child: Text('No hay libros disponibles.'));
                 }
 
+                // Filtrado por búsqueda, carrera y materia
                 var libros = snapshot.data!.docs.where((doc) {
                   var data = doc.data() as Map<String, dynamic>;
                   String titulo = (data['titulo'] ?? '').toString().toLowerCase();
@@ -82,28 +122,58 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
                   String materia = (data['materia'] ?? '').toString();
 
                   bool pasaBusqueda = titulo.contains(_busqueda) || autor.contains(_busqueda);
-                  bool pasaCarrera = _filtroCarrera == 'Todas' || carrera == _filtroCarrera;
-                  bool pasaMateria = _filtroMateria == 'Todas' || materia == _filtroMateria;
+                  bool pasaCarrera = _filtroCarrera == 'Carreras (Todas)' || carrera == _filtroCarrera;
+                  bool pasaMateria = _filtroMateria == 'Materias (Todas)' || materia == _filtroMateria;
 
                   return pasaBusqueda && pasaCarrera && pasaMateria;
                 }).toList();
 
+                // NUEVA LÓGICA DE ORDENAMIENTO (ALFABÉTICO VS TIEMPO CON fechaPublicacion)
+                libros.sort((a, b) {
+                  var dataA = a.data() as Map<String, dynamic>;
+                  var dataB = b.data() as Map<String, dynamic>;
+                  
+                  // 1. Si hay orden alfabético activo, lo priorizamos
+                  if (_filtroAlfa != 'Alfabético (-)') {
+                    String tituloA = (dataA['titulo'] ?? '').toString().toLowerCase();
+                    String tituloB = (dataB['titulo'] ?? '').toString().toLowerCase();
+                    if (_filtroAlfa == 'A-Z') return tituloA.compareTo(tituloB);
+                    if (_filtroAlfa == 'Z-A') return tituloB.compareTo(tituloA);
+                  }
+
+                  // 2. Si no hay orden alfabético, usamos fechaPublicacion
+                  Timestamp? fechaA = dataA['fechaPublicacion'] as Timestamp?;
+                  Timestamp? fechaB = dataB['fechaPublicacion'] as Timestamp?;
+
+                  // Prevención de errores por si algún documento viejo no tiene fecha
+                  if (fechaA == null && fechaB == null) return 0;
+                  if (fechaA == null) return 1; // Los nulos van al final
+                  if (fechaB == null) return -1;
+
+                  if (_filtroTiempo == 'Más Antiguos') {
+                    return fechaA.compareTo(fechaB);
+                  } else { 
+                    // 'Más Recientes'
+                    return fechaB.compareTo(fechaA);
+                  }
+                });
+
                 return GridView.builder(
-                  padding: const EdgeInsets.all(12),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    crossAxisSpacing: 8,
-                    mainAxisSpacing: 8,
-                    childAspectRatio: 0.55,
+                  padding: const EdgeInsets.all(16),
+                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                    maxCrossAxisExtent: 180, 
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                    childAspectRatio: 0.60, 
                   ),
                   itemCount: libros.length,
                   itemBuilder: (context, index) {
                     var libroData = libros[index].data() as Map<String, dynamic>;
                     String idDoc = libros[index].id;
 
-                    return GestureDetector(
+                    return _HoverBookCard(
+                      libroData: libroData,
                       onTap: () {
-                        // LA CONEXIÓN CRÍTICA ESTÁ AQUÍ
                         Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -114,7 +184,6 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
                           ),
                         );
                       },
-                      child: _buildCardLibro(libroData),
                     );
                   },
                 );
@@ -127,54 +196,96 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
   }
 
   Widget _buildFiltro({required String value, required List<String> items, required ValueChanged<String?> onChanged}) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(border: Border.all(color: Colors.grey[300]!), borderRadius: BorderRadius.circular(20)),
-        child: DropdownButtonHideUnderline(
-          child: DropdownButton<String>(
-            value: value,
-            isExpanded: true,
-            style: const TextStyle(fontSize: 12, color: Colors.black),
-            items: items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-            onChanged: onChanged,
-          ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(border: Border.all(color: Colors.grey[300]!), borderRadius: BorderRadius.circular(20)),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: value,
+          style: const TextStyle(fontSize: 12, color: Colors.black),
+          items: items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+          onChanged: onChanged,
         ),
       ),
     );
   }
+}
 
-  Widget _buildCardLibro(Map<String, dynamic> data) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4)],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
-              child: Image.network(
-                data['fotoUrl'] ?? 'https://via.placeholder.com/150',
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => const Icon(Icons.book),
-              ),
+// --- WIDGET PARA ANIMAR Y DETECTAR EL RATÓN (HOVER) ---
+class _HoverBookCard extends StatefulWidget {
+  final Map<String, dynamic> libroData;
+  final VoidCallback onTap;
+
+  const _HoverBookCard({required this.libroData, required this.onTap});
+
+  @override
+  State<_HoverBookCard> createState() => _HoverBookCardState();
+}
+
+class _HoverBookCardState extends State<_HoverBookCard> {
+  bool _isHovering = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click, 
+      onEnter: (_) => setState(() => _isHovering = true),
+      onExit: (_) => setState(() => _isHovering = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedScale(
+          scale: _isHovering ? 1.05 : 1.0, 
+          duration: const Duration(milliseconds: 200), 
+          curve: Curves.easeInOut,
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: _isHovering ? Colors.black26 : Colors.black12, 
+                  blurRadius: _isHovering ? 12 : 4,
+                  offset: Offset(0, _isHovering ? 4 : 2),
+                )
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                    child: Image.network(
+                      widget.libroData['fotoUrl'] ?? 'https://via.placeholder.com/150',
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => const Icon(Icons.book, size: 50, color: Colors.grey),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Text(
+                    widget.libroData['titulo'] ?? 'Sin título',
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (widget.libroData['autor'] != null)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0).copyWith(bottom: 8.0),
+                    child: Text(
+                      widget.libroData['autor'],
+                      style: TextStyle(fontSize: 10, color: Colors.grey[700]),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+              ],
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(4.0),
-            child: Text(
-              data['titulo'] ?? 'Sin título',
-              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
