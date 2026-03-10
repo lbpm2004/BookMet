@@ -41,49 +41,47 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyB97GF6IsU_YA-w_o5ta8mVICrr-CJBQxA',
-    appId: '1:1072504067704:web:2f13cb4140b0f89137bf8d',
-    messagingSenderId: '1072504067704',
-    projectId: 'bookmet-bd',
-    authDomain: 'bookmet-bd.firebaseapp.com',
-    storageBucket: 'bookmet-bd.firebasestorage.app',
-    measurementId: 'G-K642LRHL88',
+    apiKey: 'AIzaSyDg2AawHfaRLzhf5X9cwpTGeHSlb0Jnu5g',
+    appId: '1:88533093986:web:2005df449b9d3d8e8c0b3b',
+    messagingSenderId: '88533093986',
+    projectId: 'bookmet-test',
+    authDomain: 'bookmet-test.firebaseapp.com',
+    storageBucket: 'bookmet-test.firebasestorage.app',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyC9Gkimb56Rjihj80AkwVWylsBMAIfnJjk',
-    appId: '1:1072504067704:android:5a77dc893d2dfadf37bf8d',
-    messagingSenderId: '1072504067704',
-    projectId: 'bookmet-bd',
-    storageBucket: 'bookmet-bd.firebasestorage.app',
+    apiKey: 'AIzaSyBovjdlW4-t92CyJw0bi6IuuWYB2GACZBw',
+    appId: '1:88533093986:android:c0aa71b81945a81a8c0b3b',
+    messagingSenderId: '88533093986',
+    projectId: 'bookmet-test',
+    storageBucket: 'bookmet-test.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyBXygH5GD1OQU6GRxoOEqLFwpl69E56q9c',
-    appId: '1:1072504067704:ios:9f781875ed97143537bf8d',
-    messagingSenderId: '1072504067704',
-    projectId: 'bookmet-bd',
-    storageBucket: 'bookmet-bd.firebasestorage.app',
+    apiKey: 'AIzaSyCeVa_bOvVetRU_v6DLWR7S1m-EetF1cQM',
+    appId: '1:88533093986:ios:27b8543b3533c1ce8c0b3b',
+    messagingSenderId: '88533093986',
+    projectId: 'bookmet-test',
+    storageBucket: 'bookmet-test.firebasestorage.app',
     iosBundleId: 'com.example.flutterApplicationBookmet',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyBXygH5GD1OQU6GRxoOEqLFwpl69E56q9c',
-    appId: '1:1072504067704:ios:9f781875ed97143537bf8d',
-    messagingSenderId: '1072504067704',
-    projectId: 'bookmet-bd',
-    storageBucket: 'bookmet-bd.firebasestorage.app',
+    apiKey: 'AIzaSyCeVa_bOvVetRU_v6DLWR7S1m-EetF1cQM',
+    appId: '1:88533093986:ios:27b8543b3533c1ce8c0b3b',
+    messagingSenderId: '88533093986',
+    projectId: 'bookmet-test',
+    storageBucket: 'bookmet-test.firebasestorage.app',
     iosBundleId: 'com.example.flutterApplicationBookmet',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyB97GF6IsU_YA-w_o5ta8mVICrr-CJBQxA',
-    appId: '1:1072504067704:web:2d35b4d8b6fd7dfe37bf8d',
-    messagingSenderId: '1072504067704',
-    projectId: 'bookmet-bd',
-    authDomain: 'bookmet-bd.firebaseapp.com',
-    storageBucket: 'bookmet-bd.firebasestorage.app',
-    measurementId: 'G-9YMQ70TZFT',
+    apiKey: 'AIzaSyDg2AawHfaRLzhf5X9cwpTGeHSlb0Jnu5g',
+    appId: '1:88533093986:web:a0e4c64157e9212b8c0b3b',
+    messagingSenderId: '88533093986',
+    projectId: 'bookmet-test',
+    authDomain: 'bookmet-test.firebaseapp.com',
+    storageBucket: 'bookmet-test.firebasestorage.app',
   );
 
 }

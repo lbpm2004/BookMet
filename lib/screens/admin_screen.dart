@@ -5,6 +5,7 @@ import '../services/auth_service.dart';
 import 'catalogo_screen.dart'; 
 import 'perfil_screen.dart';
 import 'gestionar_baneos_screen.dart'; // <-- ¡IMPORTAMOS LA PANTALLA DE BANEOS!
+import 'mis_solicitudes_screen.dart'; // Para reutilizar la lógica de transacciones
 
 class AdminScreen extends StatefulWidget {
   const AdminScreen({Key? key}) : super(key: key);
@@ -84,8 +85,31 @@ class _AdminScreenState extends State<AdminScreen> {
     );
   }
 
+  Widget _construirVentanaSolicitudes() {
+    return DefaultTabController(
+      length: 2,
+      child: Column(
+        children: [
+          const TabBar(tabs: [
+            Tab(icon: Icon(Icons.fact_check), text: 'Por Moderar'),
+            Tab(icon: Icon(Icons.swap_horiz), text: 'Mis Intercambios')
+          ],
+          ),
+          Expanded(child: TabBarView(children: [
+            // VISTA 1: La lógica actual de moderación de publicaciones
+            _construirListaModeracion(),
+
+            // VISTA 2: La pantalla de transacciones personales
+            const MisSolicitudesScreen()
+          ]))
+        ],
+      )
+      );
+  }
+
+
   // --- AQUÍ ESTÁ EL CAMBIO PRINCIPAL ---
-  Widget _construirGestionSolicitudes() {
+  Widget _construirListaModeracion() {
     return StreamBuilder<QuerySnapshot>(
       // ¡IMPORTANTE!: Buscamos en 'publicaciones' con estado 'Pendiente'
       stream: FirebaseFirestore.instance
@@ -193,7 +217,7 @@ class _AdminScreenState extends State<AdminScreen> {
     switch (_indiceSeleccionado) {
       case 0: return _construirVistaInicio();
       case 1: return const CatalogoScreen(); 
-      case 2: return _construirGestionSolicitudes();
+      case 2: return _construirVentanaSolicitudes();
       case 3: return _construirGestionUsuarios();
       default: return _construirVistaInicio();
     }

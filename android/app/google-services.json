@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "1072504067704",
-    "project_id": "bookmet-bd",
-    "storage_bucket": "bookmet-bd.firebasestorage.app"
+    "project_number": "88533093986",
+    "project_id": "bookmet-test",
+    "storage_bucket": "bookmet-test.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:1072504067704:android:5a77dc893d2dfadf37bf8d",
+        "mobilesdk_app_id": "1:88533093986:android:c0aa71b81945a81a8c0b3b",
         "android_client_info": {
           "package_name": "com.example.flutter_application_bookmet"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyC9Gkimb56Rjihj80AkwVWylsBMAIfnJjk"
+          "current_key": "AIzaSyBovjdlW4-t92CyJw0bi6IuuWYB2GACZBw"
         }
       ],
       "services": {
