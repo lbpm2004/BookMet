@@ -10,7 +10,7 @@ import 'perfil_screen.dart';
 import 'lista_deseos_screen.dart'; // <-- ¡AQUÍ IMPORTAMOS LA NUEVA PANTALLA!
 
 class UsuarioScreen extends StatefulWidget {
-  const UsuarioScreen({Key? key}) : super(key: key);
+  const UsuarioScreen({super.key});
 
   @override
   _UsuarioScreenState createState() => _UsuarioScreenState();

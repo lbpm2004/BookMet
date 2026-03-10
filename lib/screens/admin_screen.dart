@@ -3,12 +3,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; 
 import '../services/auth_service.dart';
 import 'catalogo_screen.dart'; 
-import 'perfil_screen.dart';
 import 'gestionar_baneos_screen.dart'; // <-- ¡IMPORTAMOS LA PANTALLA DE BANEOS!
 import 'mis_solicitudes_screen.dart'; // Para reutilizar la lógica de transacciones
 
 class AdminScreen extends StatefulWidget {
-  const AdminScreen({Key? key}) : super(key: key);
+  const AdminScreen({super.key});
 
   @override
   _AdminScreenState createState() => _AdminScreenState();

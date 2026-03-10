@@ -267,7 +267,7 @@ class _PublicarScreenState extends State<PublicarScreen> {
                         ),
                         const SizedBox(height: 16),
                         DropdownButtonFormField<String>(
-                          value: _estadoSeleccionado,
+                          initialValue: _estadoSeleccionado,
                           decoration: const InputDecoration(labelText: 'Estado físico del libro', border: OutlineInputBorder()),
                           items: _opcionesEstado.map((estado) {
                             return DropdownMenuItem(value: estado, child: Text(estado.replaceAll('_', ' ').toUpperCase()));
