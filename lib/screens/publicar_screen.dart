@@ -96,12 +96,12 @@ class _PublicarScreenState extends State<PublicarScreen> {
 
   Future<String?> _subirImagenSupabase(Uint8List bytes, String fileName, String folder) async {
     try {
-      final String fullPath = '$folder/${DateTime.now().millisecondsSinceEpoch}_$fileName';
+      final String fullPath = 'imagenes/${DateTime.now().millisecondsSinceEpoch}_$fileName';
       await Supabase.instance.client.storage
-          .from('imagenes_libros')
+          .from('publicaciones')
           .uploadBinary(fullPath, bytes);
       return Supabase.instance.client.storage
-          .from('imagenes_libros')
+          .from('publicaciones')
           .getPublicUrl(fullPath);
     } catch (e) {
       debugPrint("Error subiendo imagen a Supabase: $e");
