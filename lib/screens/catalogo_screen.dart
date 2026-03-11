@@ -88,7 +88,7 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
               // IMPORTANTE: Solo traemos libros aprobados por el Admin (DISPONIBLE)
               stream: FirebaseFirestore.instance
                   .collection('publicaciones')
-                  .where('estado', isEqualTo: 'DISPONIBLE') 
+                  .where('estado', whereIn: ['DISPONIBLE', 'RESERVADO', 'PAUSADO']) 
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
