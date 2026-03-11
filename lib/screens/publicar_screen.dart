@@ -150,7 +150,7 @@ class _PublicarScreenState extends State<PublicarScreen> {
 
       if (widget.docId == null) {
         // CAMBIO JUSTO: El libro entra como PENDIENTE
-        datosLibro['estado'] = 'PENDIENTE'; 
+        datosLibro['estado'] = 'Pendiente'; 
         await FirebaseFirestore.instance.collection('publicaciones').add(datosLibro);
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
