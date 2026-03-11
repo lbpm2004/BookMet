@@ -317,7 +317,7 @@ class _PublicarScreenState extends State<PublicarScreen> {
               const SizedBox(height: 12),
 
               DropdownButtonFormField<String>(
-                value: _carreraSeleccionada,
+                initialValue: _carreraSeleccionada,
                 decoration: const InputDecoration(labelText: 'Carrera', border: OutlineInputBorder()),
                 items: _carreras.map((carrera) => DropdownMenuItem(value: carrera, child: Text(carrera))).toList(),
                 onChanged: (value) => setState(() => _carreraSeleccionada = value),
@@ -326,7 +326,7 @@ class _PublicarScreenState extends State<PublicarScreen> {
               const SizedBox(height: 12),
 
               DropdownButtonFormField<String>(
-                value: _materiaSeleccionada,
+                initialValue: _materiaSeleccionada,
                 decoration: const InputDecoration(labelText: 'Materia', border: OutlineInputBorder()),
                 items: _materias.map((materia) => DropdownMenuItem(value: materia, child: Text(materia))).toList(),
                 onChanged: (value) => setState(() => _materiaSeleccionada = value),
@@ -335,7 +335,7 @@ class _PublicarScreenState extends State<PublicarScreen> {
               const SizedBox(height: 12),
 
               DropdownButtonFormField<String>(
-                value: _estadoSeleccionado,
+                initialValue: _estadoSeleccionado,
                 decoration: const InputDecoration(labelText: 'Estado físico', border: OutlineInputBorder()),
                 items: _opcionesEstado.map((e) => DropdownMenuItem(value: e, child: Text(e.replaceAll('_', ' ').toUpperCase()))).toList(),
                 onChanged: (val) => setState(() => _estadoSeleccionado = val),

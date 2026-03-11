@@ -26,14 +26,13 @@ class _DetalleLibroScreenState extends State<DetalleLibroScreen> {
     if (user == null) return;
     
     try {
-      // Intentamos pedirle el documento a Firebase
       final userDoc = await FirebaseFirestore.instance
           .collection('usuarios')
           .doc(user!.uid)
           .get();
 
       if (userDoc.exists) {
-        var data = userDoc.data() as Map<String, dynamic>?;
+        var data = userDoc.data();
         
         List<dynamic> favoritos = (data != null && data.containsKey('favoritos')) 
             ? data['favoritos'] 
@@ -46,9 +45,7 @@ class _DetalleLibroScreenState extends State<DetalleLibroScreen> {
         }
       }
     } catch (e) {
-      // SI OCURRE UN ERROR (Permisos, no existe, etc.), LA APP CAE AQUÍ EN LUGAR DE CONGELARSE
       debugPrint('Error silencioso al cargar favoritos: $e');
-      // Simplemente lo dejamos como NO favorito y la app sigue funcionando normal
       if (mounted) {
         setState(() {
           isFavorite = false;
@@ -62,24 +59,41 @@ class _DetalleLibroScreenState extends State<DetalleLibroScreen> {
 
     final userRef = FirebaseFirestore.instance.collection('usuarios').doc(user!.uid);
 
-    // Actualizamos el estado localmente para que la UI reaccione rápido
     setState(() {
       isFavorite = !isFavorite;
     });
 
     try {
       if (isFavorite) {
-        // Agregamos con set y merge para que si el campo no existe, lo cree sin errores
         await userRef.set({
           'favoritos': FieldValue.arrayUnion([widget.docId])
         }, SetOptions(merge: true));
+        
+        // MENSAJE DE AÑADIDO
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('❤️ Añadido a tu lista de deseos'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
       } else {
         await userRef.set({
           'favoritos': FieldValue.arrayRemove([widget.docId])
         }, SetOptions(merge: true));
+
+        // MENSAJE DE ELIMINADO
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('💔 Eliminado de tu lista de deseos'),
+            backgroundColor: Colors.redAccent,
+            duration: Duration(seconds: 2),
+          ),
+        );
       }
     } catch (e) {
-      // Si falla, revertimos el botón
       setState(() {
         isFavorite = !isFavorite;
       });
@@ -158,17 +172,24 @@ class _DetalleLibroScreenState extends State<DetalleLibroScreen> {
         backgroundColor: Colors.white,
         foregroundColor: Colors.orange[800],
         elevation: 1,
-        actions: [
-          // BOTÓN DE CORAZÓN MOVIDO AL APPBAR
-          IconButton(
-            icon: Icon(
-              isFavorite ? Icons.favorite : Icons.favorite_border,
-              color: isFavorite ? Colors.red : Colors.grey,
-            ),
-            onPressed: _toggleFavorite,
-          ),
-        ],
+        // CORAZÓN ELIMINADO DE AQUÍ (ACTIONS)
       ),
+
+      // =========================================================
+      // NUEVA POSICIÓN DEL CORAZÓN: BOTÓN FLOTANTE
+      // =========================================================
+      floatingActionButton: FloatingActionButton(
+        onPressed: _toggleFavorite,
+        backgroundColor: Colors.white,
+        elevation: 4,
+        child: Icon(
+          isFavorite ? Icons.favorite : Icons.favorite_border,
+          color: isFavorite ? Colors.red : Colors.grey,
+          size: 30,
+        ),
+      ),
+      // =========================================================
+
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -199,6 +220,7 @@ class _DetalleLibroScreenState extends State<DetalleLibroScreen> {
             const Text('Descripción', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             Text(widget.libro['descripcion'] ?? 'No hay descripción disponible.', style: const TextStyle(fontSize: 16)),
+            const SizedBox(height: 80), // Espacio extra para que el FAB no tape el texto
           ],
         ),
       ),

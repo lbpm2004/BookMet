@@ -3,8 +3,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; 
 import '../services/auth_service.dart';
 import 'catalogo_screen.dart'; 
-import 'gestionar_baneos_screen.dart'; // <-- ¡IMPORTAMOS LA PANTALLA DE BANEOS!
-import 'mis_solicitudes_screen.dart'; // Para reutilizar la lógica de transacciones
+import 'gestionar_baneos_screen.dart'; 
+import 'mis_solicitudes_screen.dart'; 
+import 'publicar_screen.dart';
+import 'lista_deseos_screen.dart';
+import 'mis_publicaciones_screen.dart';
 
 class AdminScreen extends StatefulWidget {
   const AdminScreen({super.key});
@@ -31,18 +34,15 @@ class _AdminScreenState extends State<AdminScreen> {
     Navigator.pushReplacementNamed(context, '/login'); 
   }
 
-  // --- NUEVA LÓGICA: APROBAR O RECHAZAR PUBLICACIÓN ---
+  // --- LÓGICA DE TRANSACCIONES ORIGINAL INTACTA ---
   Future<void> _gestionarPublicacion(String publicacionId, String usuarioId, String nuevoEstado) async {
     try {
-      // 1. Apuntamos a la colección correcta: 'publicaciones'
       final publicacionRef = FirebaseFirestore.instance.collection('publicaciones').doc(publicacionId);
       final usuarioRef = FirebaseFirestore.instance.collection('usuarios').doc(usuarioId);
 
       await FirebaseFirestore.instance.runTransaction((transaction) async {
-        // 2. Cambiamos el estado (DISPONIBLE o RECHAZADO)
         transaction.update(publicacionRef, {'estado': nuevoEstado});
 
-        // 3. Actualizamos las estadísticas del estudiante (opcional pero lo tenías en tu código)
         if (nuevoEstado == 'DISPONIBLE') {
           transaction.update(usuarioRef, {
             'aprobadas': FieldValue.increment(1),
@@ -69,7 +69,7 @@ class _AdminScreenState extends State<AdminScreen> {
     }
   }
 
-  // --- VISTAS DEL ADMIN ---
+  // --- VISTAS DEL ADMIN ORIGINALES ---
   Widget _construirVistaInicio() {
     return Center(
       child: Column(
@@ -95,10 +95,7 @@ class _AdminScreenState extends State<AdminScreen> {
           ],
           ),
           Expanded(child: TabBarView(children: [
-            // VISTA 1: La lógica actual de moderación de publicaciones
             _construirListaModeracion(),
-
-            // VISTA 2: La pantalla de transacciones personales
             const MisSolicitudesScreen()
           ]))
         ],
@@ -106,11 +103,8 @@ class _AdminScreenState extends State<AdminScreen> {
       );
   }
 
-
-  // --- AQUÍ ESTÁ EL CAMBIO PRINCIPAL ---
   Widget _construirListaModeracion() {
     return StreamBuilder<QuerySnapshot>(
-      // ¡IMPORTANTE!: Buscamos en 'publicaciones' con estado 'Pendiente'
       stream: FirebaseFirestore.instance
           .collection('publicaciones')
           .where('estado', isEqualTo: 'Pendiente')
@@ -155,7 +149,6 @@ class _AdminScreenState extends State<AdminScreen> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Miniatura del libro
                     ClipRRect(
                       borderRadius: BorderRadius.circular(8),
                       child: Image.network(
@@ -170,7 +163,6 @@ class _AdminScreenState extends State<AdminScreen> {
                       ),
                     ),
                     const SizedBox(width: 16),
-                    // Datos y botones
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -181,7 +173,6 @@ class _AdminScreenState extends State<AdminScreen> {
                           const SizedBox(height: 4),
                           Text('Materia: $materia', style: TextStyle(color: Colors.red[800], fontSize: 12, fontWeight: FontWeight.w500)),
                           const SizedBox(height: 12),
-                          // Botones de acción
                           Row(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
@@ -191,7 +182,7 @@ class _AdminScreenState extends State<AdminScreen> {
                               ),
                               IconButton(
                                 icon: const Icon(Icons.check_circle, color: Colors.green, size: 30),
-                                onPressed: () => _gestionarPublicacion(doc.id, usuarioId, 'DISPONIBLE'), // Lo manda al catálogo
+                                onPressed: () => _gestionarPublicacion(doc.id, usuarioId, 'DISPONIBLE'), 
                               ),
                             ],
                           )
@@ -216,8 +207,9 @@ class _AdminScreenState extends State<AdminScreen> {
     switch (_indiceSeleccionado) {
       case 0: return _construirVistaInicio();
       case 1: return const CatalogoScreen(); 
-      case 2: return _construirVentanaSolicitudes();
-      case 3: return _construirGestionUsuarios();
+      case 2: return const PublicarScreen(); 
+      case 3: return _construirVentanaSolicitudes();
+      case 4: return _construirGestionUsuarios();
       default: return _construirVistaInicio();
     }
   }
@@ -234,21 +226,53 @@ class _AdminScreenState extends State<AdminScreen> {
         child: user == null ? const Center(child: Text('No hay usuario activo')) : StreamBuilder<DocumentSnapshot>(
           stream: FirebaseFirestore.instance.collection('usuarios').doc(user!.uid).snapshots(),
           builder: (context, snapshot) {
-            if (!snapshot.hasData || !snapshot.data!.exists) return const Center(child: CircularProgressIndicator(color: Colors.red));
-            var userData = snapshot.data!.data() as Map<String, dynamic>;
-            String nombre = userData['nombre'] ?? 'Admin';
-            String apellido = userData['apellido'] ?? '';
-            String email = userData['email'] ?? '';
+            if (snapshot.hasError) {
+              return const Center(child: Text('Error al cargar datos del usuario'));
+            }
+
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator(color: Colors.red));
+            }
+
+            String nombre = 'Administrador';
+            String apellido = '';
+            String email = user?.email ?? '';
+
+            if (snapshot.hasData && snapshot.data!.exists) {
+              var userData = snapshot.data!.data() as Map<String, dynamic>? ?? {};
+              nombre = userData['nombre'] ?? 'Administrador';
+              apellido = userData['apellido'] ?? '';
+              email = userData['email'] ?? user?.email ?? '';
+            }
             
             return ListView(
               padding: EdgeInsets.zero,
               children: [
                 UserAccountsDrawerHeader(
                   decoration: BoxDecoration(color: Colors.red[800]),
-                  accountName: Text('$nombre $apellido', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  accountName: Text('$nombre $apellido'.trim(), style: const TextStyle(fontWeight: FontWeight.bold)),
                   accountEmail: Text(email),
                   currentAccountPicture: const CircleAvatar(backgroundColor: Colors.white, child: Icon(Icons.admin_panel_settings, size: 40, color: Colors.red)),
                 ),
+                
+                ListTile(
+                  leading: const Icon(Icons.favorite, color: Colors.redAccent),
+                  title: const Text('Mi Lista de Deseos'),
+                  onTap: () {
+                    Navigator.pop(context); 
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => const ListaDeseosScreen()));
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.book, color: Colors.orange),
+                  title: const Text('Mis Publicaciones'),
+                  onTap: () {
+                    Navigator.pop(context); 
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => const MisPublicacionesScreen()));
+                  },
+                ),
+                const Divider(),
+
                 ListTile(
                   leading: const Icon(Icons.logout, color: Colors.red),
                   title: const Text('Cerrar Sesión', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
@@ -260,6 +284,20 @@ class _AdminScreenState extends State<AdminScreen> {
         ),
       ),
       body: _obtenerCuerpoPantalla(),
+      
+      // --- CORAZONCITO FLOTANTE FIJADO ABAJO A LA DERECHA ---
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat, // <- ESTO LO ANCLA ABAJO A LA DERECHA
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(context, MaterialPageRoute(builder: (context) => const ListaDeseosScreen()));
+        },
+        backgroundColor: Colors.white,
+        elevation: 6, // Un poco más de sombra para que resalte
+        shape: const CircleBorder(), // Hace que el botón sea perfectamente redondo
+        tooltip: 'Ver Lista de Deseos',
+        child: const Icon(Icons.favorite, color: Colors.red, size: 30), // Ícono un poco más grande
+      ),
+      
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _indiceSeleccionado,
         onTap: _onItemTapped,
@@ -269,6 +307,7 @@ class _AdminScreenState extends State<AdminScreen> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'Panel'),
           BottomNavigationBarItem(icon: Icon(Icons.menu_book), label: 'Catálogo'),
+          BottomNavigationBarItem(icon: Icon(Icons.add_circle_outline), label: 'Publicar'), 
           BottomNavigationBarItem(icon: Icon(Icons.fact_check), label: 'Solicitudes'),
           BottomNavigationBarItem(icon: Icon(Icons.group_remove), label: 'Usuarios'),
         ],

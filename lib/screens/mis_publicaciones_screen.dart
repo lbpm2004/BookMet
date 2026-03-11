@@ -61,14 +61,14 @@ class _MisPublicacionesScreenState extends State<MisPublicacionesScreen> {
                   ),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
-                    value: nuevaCarrera,
+                    initialValue: nuevaCarrera,
                     decoration: const InputDecoration(labelText: 'Carrera', border: OutlineInputBorder()),
                     items: _carreras.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
                     onChanged: (val) => setStateDialog(() => nuevaCarrera = val),
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
-                    value: nuevaMateria,
+                    initialValue: nuevaMateria,
                     decoration: const InputDecoration(labelText: 'Materia', border: OutlineInputBorder()),
                     items: _materias.map((m) => DropdownMenuItem(value: m, child: Text(m))).toList(),
                     onChanged: (val) => setStateDialog(() => nuevaMateria = val),
