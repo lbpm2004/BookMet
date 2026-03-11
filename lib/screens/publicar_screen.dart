@@ -20,7 +20,6 @@ class _PublicarScreenState extends State<PublicarScreen> {
   final _autoresController = TextEditingController();
   final _descripcionController = TextEditingController();
   
-  // Variables convertidas a Strings para los desplegables
   String? _carreraSeleccionada;
   String? _materiaSeleccionada;
   String? _estadoSeleccionado;
@@ -48,13 +47,11 @@ class _PublicarScreenState extends State<PublicarScreen> {
   @override
   void initState() {
     super.initState();
-    // Lógica para cuando se edita un libro existente
     if (widget.libroAEditar != null) {
       _nombreController.text = widget.libroAEditar!['titulo'] ?? '';
       _autoresController.text = widget.libroAEditar!['autor'] ?? '';
       _descripcionController.text = widget.libroAEditar!['descripcion'] ?? '';
       
-      // Asignación directa como Strings y verificación de que existan en la lista
       String materiaGuardada = widget.libroAEditar!['materia'] ?? '';
       if (_materias.contains(materiaGuardada)) {
         _materiaSeleccionada = materiaGuardada;
@@ -74,7 +71,6 @@ class _PublicarScreenState extends State<PublicarScreen> {
 
   @override
   void dispose() {
-    // Ya no se eliminan las variables de materia y carrera porque son Strings
     _nombreController.dispose();
     _autoresController.dispose();
     _descripcionController.dispose();
@@ -142,24 +138,24 @@ class _PublicarScreenState extends State<PublicarScreen> {
       final Map<String, dynamic> datosLibro = {
         'titulo': _nombreController.text.trim(),
         'autor': _autoresController.text.trim(),
-        'materia': _materiaSeleccionada, // Lectura directa del String
-        'carrera': _carreraSeleccionada, // Lectura directa del String
+        'materia': _materiaSeleccionada,
+        'carrera': _carreraSeleccionada,
         'estadoFisico': _estadoSeleccionado,
         'descripcion': _descripcionController.text.trim(),
         'fotoUrl': portadaUrl,
         'contraportadaUrl': contraportadaUrl,
         'usuarioId': user.uid,
-        'fechaPublicacion': FieldValue.serverTimestamp(), // Para que funcione el filtro por fecha
+        'fechaPublicacion': FieldValue.serverTimestamp(),
       };
 
       if (widget.docId == null) {
-        // --- AQUÍ ESTÁ EL CAMBIO DE MODERACIÓN ---
-        datosLibro['estado'] = 'Pendiente'; 
+        // CAMBIO JUSTO: El libro entra como PENDIENTE
+        datosLibro['estado'] = 'PENDIENTE'; 
         await FirebaseFirestore.instance.collection('publicaciones').add(datosLibro);
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Libro enviado a revisión 🕒. Un administrador lo aprobará pronto.'), 
+            content: Text('Libro enviado a revisión 🕒. El administrador lo aprobará pronto.'), 
             backgroundColor: Colors.blueAccent
           ),
         );
@@ -172,7 +168,6 @@ class _PublicarScreenState extends State<PublicarScreen> {
       }
 
       if (!mounted) return;
-      // Reseteamos el estado o volvemos a la vista anterior
       _nombreController.clear();
       _autoresController.clear();
       _descripcionController.clear();
@@ -198,13 +193,12 @@ class _PublicarScreenState extends State<PublicarScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      // Si venimos a editar, mostramos la barra superior para poder regresar
-      appBar: widget.docId != null ? AppBar(
-        title: const Text('Editar Publicación'),
+      appBar: AppBar(
+        title: Text(widget.docId != null ? 'Editar Publicación' : 'Aportar Libro'),
         backgroundColor: Colors.white,
-        foregroundColor: Colors.orange[800],
+        foregroundColor: Colors.red[800], // CAMBIO: Color institucional
         elevation: 1,
-      ) : null,
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -214,15 +208,13 @@ class _PublicarScreenState extends State<PublicarScreen> {
             children: [
               const Text('Sube tus fotos', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               const SizedBox(height: 12),
-              
-              // --- IMÁGENES MÁS ALTAS (200px) ---
               Row(
                 children: [
                   Expanded(
                     child: GestureDetector(
                       onTap: () => _seleccionarImagen(true),
                       child: Container(
-                        height: 200, // ALTURA DE LA IMAGEN MODIFICADA
+                        height: 200,
                         decoration: BoxDecoration(
                           color: Colors.grey[200],
                           borderRadius: BorderRadius.circular(12),
@@ -231,20 +223,12 @@ class _PublicarScreenState extends State<PublicarScreen> {
                         child: _portadaBytes != null
                             ? ClipRRect(
                                 borderRadius: BorderRadius.circular(12),
-                                child: Image.memory(
-                                  _portadaBytes!,
-                                  fit: BoxFit.cover, // EVITA DEFORMACIÓN
-                                  width: double.infinity,
-                                ),
+                                child: Image.memory(_portadaBytes!, fit: BoxFit.cover, width: double.infinity),
                               )
                             : (widget.libroAEditar?['fotoUrl'] != null && _portadaBytes == null)
                                 ? ClipRRect(
                                     borderRadius: BorderRadius.circular(12),
-                                    child: Image.network(
-                                      widget.libroAEditar!['fotoUrl'],
-                                      fit: BoxFit.cover,
-                                      width: double.infinity,
-                                    ),
+                                    child: Image.network(widget.libroAEditar!['fotoUrl'], fit: BoxFit.cover, width: double.infinity),
                                   )
                                 : const Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
@@ -262,7 +246,7 @@ class _PublicarScreenState extends State<PublicarScreen> {
                     child: GestureDetector(
                       onTap: () => _seleccionarImagen(false),
                       child: Container(
-                        height: 200, // ALTURA DE LA IMAGEN MODIFICADA
+                        height: 200,
                         decoration: BoxDecoration(
                           color: Colors.grey[200],
                           borderRadius: BorderRadius.circular(12),
@@ -271,20 +255,12 @@ class _PublicarScreenState extends State<PublicarScreen> {
                         child: _contraportadaBytes != null
                             ? ClipRRect(
                                 borderRadius: BorderRadius.circular(12),
-                                child: Image.memory(
-                                  _contraportadaBytes!,
-                                  fit: BoxFit.cover, // EVITA DEFORMACIÓN
-                                  width: double.infinity,
-                                ),
+                                child: Image.memory(_contraportadaBytes!, fit: BoxFit.cover, width: double.infinity),
                               )
                             : (widget.libroAEditar?['contraportadaUrl'] != null && _contraportadaBytes == null)
                                 ? ClipRRect(
                                     borderRadius: BorderRadius.circular(12),
-                                    child: Image.network(
-                                      widget.libroAEditar!['contraportadaUrl'],
-                                      fit: BoxFit.cover,
-                                      width: double.infinity,
-                                    ),
+                                    child: Image.network(widget.libroAEditar!['contraportadaUrl'], fit: BoxFit.cover, width: double.infinity),
                                   )
                                 : const Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
@@ -300,55 +276,47 @@ class _PublicarScreenState extends State<PublicarScreen> {
                 ],
               ),
               const SizedBox(height: 24),
-              
-              // --- CAMPOS DE TEXTO Y DESPLEGABLES ---
               TextFormField(
                 controller: _nombreController,
                 decoration: const InputDecoration(labelText: 'Título del libro', border: OutlineInputBorder()),
                 validator: (value) => value!.isEmpty ? 'Ingresa el título' : null,
               ),
               const SizedBox(height: 12),
-              
               TextFormField(
                 controller: _autoresController,
-                decoration: const InputDecoration(labelText: 'Autor(es) separados por coma', border: OutlineInputBorder()),
+                decoration: const InputDecoration(labelText: 'Autor(es)', border: OutlineInputBorder()),
                 validator: (value) => value!.isEmpty ? 'Ingresa el autor' : null,
               ),
               const SizedBox(height: 12),
-
               DropdownButtonFormField<String>(
-                initialValue: _carreraSeleccionada,
+                value: _carreraSeleccionada, // CAMBIO: 'value' para evitar errores de estado
                 decoration: const InputDecoration(labelText: 'Carrera', border: OutlineInputBorder()),
-                items: _carreras.map((carrera) => DropdownMenuItem(value: carrera, child: Text(carrera))).toList(),
+                items: _carreras.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
                 onChanged: (value) => setState(() => _carreraSeleccionada = value),
                 validator: (value) => value == null ? 'Selecciona una carrera' : null,
               ),
               const SizedBox(height: 12),
-
               DropdownButtonFormField<String>(
-                initialValue: _materiaSeleccionada,
+                value: _materiaSeleccionada, // CAMBIO: 'value'
                 decoration: const InputDecoration(labelText: 'Materia', border: OutlineInputBorder()),
-                items: _materias.map((materia) => DropdownMenuItem(value: materia, child: Text(materia))).toList(),
+                items: _materias.map((m) => DropdownMenuItem(value: m, child: Text(m))).toList(),
                 onChanged: (value) => setState(() => _materiaSeleccionada = value),
                 validator: (value) => value == null ? 'Selecciona una materia' : null,
               ),
               const SizedBox(height: 12),
-
               DropdownButtonFormField<String>(
-                initialValue: _estadoSeleccionado,
+                value: _estadoSeleccionado, // CAMBIO: 'value'
                 decoration: const InputDecoration(labelText: 'Estado físico', border: OutlineInputBorder()),
                 items: _opcionesEstado.map((e) => DropdownMenuItem(value: e, child: Text(e.replaceAll('_', ' ').toUpperCase()))).toList(),
                 onChanged: (val) => setState(() => _estadoSeleccionado = val),
                 validator: (v) => v == null ? 'Selecciona el estado' : null,
               ),
               const SizedBox(height: 12),
-
               TextFormField(
                 controller: _descripcionController,
                 maxLines: 3,
                 decoration: const InputDecoration(labelText: 'Descripción', border: OutlineInputBorder()),
                 validator: (value) {
-                  // Si el estado es deteriorado, exigimos que el campo no esté vacío
                   if (_estadoSeleccionado == 'deteriorado' && (value == null || value.trim().isEmpty)) {
                     return 'Por favor, describe el deterioro del libro.';
                   }
@@ -356,18 +324,17 @@ class _PublicarScreenState extends State<PublicarScreen> {
                 },
               ),
               const SizedBox(height: 24),
-
               _isLoading
-                  ? const Center(child: CircularProgressIndicator(color: Colors.orange))
+                  ? Center(child: CircularProgressIndicator(color: Colors.red[800]))
                   : SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: _enviarSolicitud,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange[800],
+                          backgroundColor: Colors.red[800], // CAMBIO: Color institucional
                           padding: const EdgeInsets.symmetric(vertical: 18),
                         ),
-                        child: Text(widget.docId != null ? 'GUARDAR CAMBIOS' : 'PUBLICAR', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        child: Text(widget.docId != null ? 'GUARDAR CAMBIOS' : 'ENVIAR A REVISIÓN', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                       ),
                     ),
             ],

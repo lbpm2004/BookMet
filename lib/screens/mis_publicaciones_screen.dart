@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'publicar_screen.dart'; // Importante para la edición completa
 
 class MisPublicacionesScreen extends StatefulWidget {
   const MisPublicacionesScreen({super.key});
@@ -12,10 +13,7 @@ class MisPublicacionesScreen extends StatefulWidget {
 class _MisPublicacionesScreenState extends State<MisPublicacionesScreen> {
   final String? userId = FirebaseAuth.instance.currentUser?.uid;
 
-  final List<String> _carreras = ['Ingenieria', 'Psicologia', 'Derecho', 'Administracion'];
-  final List<String> _materias = ['Matemáticas 1', 'Matemáticas 2', 'Matemáticas 5', 'Física'];
-
-  // Función para confirmar y eliminar una publicación
+  // Función para confirmar y eliminar una publicación (TU LÓGICA INTACTA)
   void _confirmarEliminacion(String docId) {
     showDialog(
       context: context,
@@ -40,67 +38,16 @@ class _MisPublicacionesScreenState extends State<MisPublicacionesScreen> {
     );
   }
 
-  // Ventana emergente para editar Carrera y Materia
-  void _mostrarDialogoEdicion(String docId, String carreraActual, String materiaActual) {
-    String? nuevaCarrera = _carreras.contains(carreraActual) ? carreraActual : null;
-    String? nuevaMateria = _materias.contains(materiaActual) ? materiaActual : null;
-
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (context, setStateDialog) {
-            return AlertDialog(
-              title: const Text('Editar Clasificación', style: TextStyle(fontWeight: FontWeight.bold)),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text(
-                    'Al guardar los cambios, la publicación pasará a estado PAUSADO y será enviada a revisión.',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                  const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    initialValue: nuevaCarrera,
-                    decoration: const InputDecoration(labelText: 'Carrera', border: OutlineInputBorder()),
-                    items: _carreras.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-                    onChanged: (val) => setStateDialog(() => nuevaCarrera = val),
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    initialValue: nuevaMateria,
-                    decoration: const InputDecoration(labelText: 'Materia', border: OutlineInputBorder()),
-                    items: _materias.map((m) => DropdownMenuItem(value: m, child: Text(m))).toList(),
-                    onChanged: (val) => setStateDialog(() => nuevaMateria = val),
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('CANCELAR', style: TextStyle(color: Colors.grey))),
-                ElevatedButton(
-                  onPressed: () async {
-                    if (nuevaCarrera != null && nuevaMateria != null) {
-                      // Actualizamos y pausamos
-                      await FirebaseFirestore.instance.collection('publicaciones').doc(docId).update({
-                        'carrera': nuevaCarrera,
-                        'materia': nuevaMateria,
-                        'estado': 'PAUSADO',
-                      });
-                      if (!mounted) return;
-                      Navigator.pop(ctx);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Cambios guardados. Publicación en revisión.'), backgroundColor: Colors.orange),
-                      );
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.orange[800]),
-                  child: const Text('GUARDAR Y PAUSAR', style: TextStyle(color: Colors.white)),
-                )
-              ],
-            );
-          }
-        );
-      }
+  // CAMBIO JUSTO: Ahora redirige a la pantalla de edición completa que ya tienes
+  void _editarPublicacionCompleta(Map<String, dynamic> libroData, String docId) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PublicarScreen(
+          libroAEditar: libroData,
+          docId: docId,
+        ),
+      ),
     );
   }
 
@@ -111,11 +58,10 @@ class _MisPublicacionesScreenState extends State<MisPublicacionesScreen> {
       appBar: AppBar(
         title: const Text('Mis Publicaciones', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.white,
-        foregroundColor: Colors.orange[800],
+        foregroundColor: Colors.red[800], // CAMBIO: Color institucional
         elevation: 1,
       ),
       body: StreamBuilder<QuerySnapshot>(
-        // Buscamos SOLO las publicaciones creadas por este usuario
         stream: FirebaseFirestore.instance
             .collection('publicaciones')
             .where('usuarioId', isEqualTo: userId)
@@ -125,7 +71,7 @@ class _MisPublicacionesScreenState extends State<MisPublicacionesScreen> {
             return const Center(child: Text('Error al cargar tus publicaciones.'));
           }
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: Colors.orange));
+            return Center(child: CircularProgressIndicator(color: Colors.red[800]));
           }
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
             return const Center(child: Text('Aún no has subido ningún libro.'));
@@ -145,12 +91,10 @@ class _MisPublicacionesScreenState extends State<MisPublicacionesScreen> {
             itemBuilder: (context, index) {
               var libroData = libros[index].data() as Map<String, dynamic>;
               String idDoc = libros[index].id;
-              String carreraActual = libroData['carrera'] ?? '';
-              String materiaActual = libroData['materia'] ?? '';
 
               return _HoverMiPublicacionCard(
                 libroData: libroData,
-                onEdit: () => _mostrarDialogoEdicion(idDoc, carreraActual, materiaActual),
+                onEdit: () => _editarPublicacionCompleta(libroData, idDoc), // USAR EDICIÓN COMPLETA
                 onDelete: () => _confirmarEliminacion(idDoc),
               );
             },
@@ -161,7 +105,6 @@ class _MisPublicacionesScreenState extends State<MisPublicacionesScreen> {
   }
 }
 
-// --- WIDGET PARA ANIMAR Y MOSTRAR OPCIONES (HOVER) ---
 class _HoverMiPublicacionCard extends StatefulWidget {
   final Map<String, dynamic> libroData;
   final VoidCallback onEdit;
@@ -178,22 +121,20 @@ class _HoverMiPublicacionCardState extends State<_HoverMiPublicacionCard> {
 
   @override
   Widget build(BuildContext context) {
-    String estado = widget.libroData['estado'] ?? 'DESCONOCIDO';
+    // CAMBIO JUSTO: Añadido estado PENDING/PENDIENTE al visualizador
+    String estado = (widget.libroData['estado'] ?? 'PENDIENTE').toString().toUpperCase();
     
-    // Asignar colores según el estado
     Color colorEstado = Colors.grey;
     if (estado == 'DISPONIBLE') colorEstado = Colors.green;
     if (estado == 'RESERVADO') colorEstado = Colors.blue;
-    if (estado == 'PAUSADO') colorEstado = Colors.orange;
+    if (estado == 'PENDIENTE') colorEstado = Colors.orange; // El nuevo estado de revisión
 
     return MouseRegion(
-      cursor: SystemMouseCursors.basic, 
       onEnter: (_) => setState(() => _isHovering = true),
       onExit: (_) => setState(() => _isHovering = false),
       child: AnimatedScale(
         scale: _isHovering ? 1.05 : 1.0, 
         duration: const Duration(milliseconds: 200), 
-        curve: Curves.easeInOut,
         child: Container(
           decoration: BoxDecoration(
             color: Colors.white,
@@ -202,7 +143,7 @@ class _HoverMiPublicacionCardState extends State<_HoverMiPublicacionCard> {
               BoxShadow(
                 color: _isHovering ? Colors.black26 : Colors.black12, 
                 blurRadius: _isHovering ? 12 : 4,
-                offset: Offset(0, _isHovering ? 4 : 2),
+                offset: const Offset(0, 2),
               )
             ],
           ),
@@ -234,7 +175,6 @@ class _HoverMiPublicacionCardState extends State<_HoverMiPublicacionCard> {
                 ],
               ),
               
-              // ETIQUETA DE ESTADO (Arriba a la izquierda)
               Positioned(
                 top: 8,
                 left: 8,
@@ -245,13 +185,12 @@ class _HoverMiPublicacionCardState extends State<_HoverMiPublicacionCard> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    estado,
+                    estado == 'PENDIENTE' ? 'EN REVISIÓN' : estado,
                     style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
 
-              // BOTÓN DE OPCIONES (Arriba a la derecha)
               Positioned(
                 top: 0,
                 right: 0,
@@ -267,7 +206,7 @@ class _HoverMiPublicacionCardState extends State<_HoverMiPublicacionCard> {
                   itemBuilder: (context) => [
                     const PopupMenuItem(
                       value: 'editar',
-                      child: Row(children: [Icon(Icons.edit, size: 18, color: Colors.orange), SizedBox(width: 8), Text('Editar Clasificación')]),
+                      child: Row(children: [Icon(Icons.edit, size: 18, color: Colors.blue), SizedBox(width: 8), Text('Editar Libro')]),
                     ),
                     const PopupMenuItem(
                       value: 'eliminar',

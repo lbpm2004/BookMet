@@ -34,7 +34,7 @@ class _AdminScreenState extends State<AdminScreen> {
     Navigator.pushReplacementNamed(context, '/login'); 
   }
 
-  // --- LÓGICA DE TRANSACCIONES ORIGINAL INTACTA ---
+  // --- 1. LÓGICA DE MODERACIÓN (Para libros nuevos que se suben) ---
   Future<void> _gestionarPublicacion(String publicacionId, String usuarioId, String nuevoEstado) async {
     try {
       final publicacionRef = FirebaseFirestore.instance.collection('publicaciones').doc(publicacionId);
@@ -69,7 +69,30 @@ class _AdminScreenState extends State<AdminScreen> {
     }
   }
 
-  // --- VISTAS DEL ADMIN ORIGINALES ---
+  // --- 2. NUEVA LÓGICA DE GESTIÓN DE PRÉSTAMOS (Admin decide quién recibe el libro) ---
+  Future<void> _procesarSolicitudPrestamo(String solicitudId, String libroId, String nuevoEstado) async {
+    try {
+      // Actualizar la solicitud
+      await FirebaseFirestore.instance.collection('solicitudes').doc(solicitudId).update({
+        'estadoSolicitud': nuevoEstado,
+      });
+
+      // Actualizar el libro: si se acepta queda "PRESTADO", si se rechaza vuelve a "DISPONIBLE"
+      String estadoLibro = (nuevoEstado == 'ACEPTADO') ? 'PRESTADO' : 'DISPONIBLE';
+      await FirebaseFirestore.instance.collection('publicaciones').doc(libroId).update({
+        'estado': estadoLibro,
+      });
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Solicitud $nuevoEstado'), backgroundColor: nuevoEstado == 'ACEPTADO' ? Colors.green : Colors.orange),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
+    }
+  }
+
+  // --- VISTAS DEL ADMIN ---
   Widget _construirVistaInicio() {
     return Center(
       child: Column(
@@ -84,25 +107,35 @@ class _AdminScreenState extends State<AdminScreen> {
     );
   }
 
+  // VENTANA DE SOLICITUDES ACTUALIZADA CON 3 SECCIONES
   Widget _construirVentanaSolicitudes() {
     return DefaultTabController(
-      length: 2,
+      length: 3, // Aumentado a 3
       child: Column(
         children: [
-          const TabBar(tabs: [
-            Tab(icon: Icon(Icons.fact_check), text: 'Por Moderar'),
-            Tab(icon: Icon(Icons.swap_horiz), text: 'Mis Intercambios')
-          ],
+          const TabBar(
+            isScrollable: true,
+            tabs: [
+              Tab(icon: Icon(Icons.fact_check), text: 'Nuevos Libros'),
+              Tab(icon: Icon(Icons.library_books), text: 'Gestión Préstamos'),
+              Tab(icon: Icon(Icons.swap_horiz), text: 'Mis Solicitudes'),
+            ],
           ),
-          Expanded(child: TabBarView(children: [
-            _construirListaModeracion(),
-            const MisSolicitudesScreen()
-          ]))
+          Expanded(
+            child: TabBarView(
+              children: [
+                _construirListaModeracion(), // Moderación de publicaciones
+                _construirListaSolicitudesGlobales(), // Gestión de quién pide qué (Biblioteca)
+                const MisSolicitudesScreen(), // Tus solicitudes personales
+              ],
+            ),
+          )
         ],
-      )
-      );
+      ),
+    );
   }
 
+  // 1. LISTA PARA MODERAR LIBROS NUEVOS
   Widget _construirListaModeracion() {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
@@ -111,21 +144,7 @@ class _AdminScreenState extends State<AdminScreen> {
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator(color: Colors.red));
-        
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.check_circle_outline, size: 80, color: Colors.grey[400]),
-                const SizedBox(height: 16),
-                Text('Todo al día', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.grey[700])),
-                const SizedBox(height: 8),
-                Text('No hay publicaciones pendientes por revisar.', style: TextStyle(color: Colors.grey[500])),
-              ],
-            ),
-          );
-        }
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) return _vistaVacia('No hay libros por moderar');
 
         return ListView.builder(
           padding: const EdgeInsets.all(16),
@@ -133,69 +152,102 @@ class _AdminScreenState extends State<AdminScreen> {
           itemBuilder: (context, index) {
             var doc = snapshot.data!.docs[index];
             var libro = doc.data() as Map<String, dynamic>;
-            
-            String titulo = libro['titulo'] ?? 'Sin título';
-            String autor = libro['autor'] ?? 'Autor desconocido';
-            String materia = libro['materia'] ?? 'Sin materia';
-            String fotoUrl = libro['fotoUrl'] ?? 'https://via.placeholder.com/150';
-            String usuarioId = libro['usuarioId'] ?? '';
+            return _tarjetaModeracion(doc.id, libro);
+          },
+        );
+      },
+    );
+  }
+
+  // 2. LISTA PARA GESTIONAR QUIÉN PIDE LOS LIBROS (Biblioteca Centralizada)
+  Widget _construirListaSolicitudesGlobales() {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('solicitudes')
+          .orderBy('fecha', descending: true)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator(color: Colors.red));
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) return _vistaVacia('No hay pedidos de libros');
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: snapshot.data!.docs.length,
+          itemBuilder: (context, index) {
+            var doc = snapshot.data!.docs[index];
+            var sol = doc.data() as Map<String, dynamic>;
+            String estado = sol['estadoSolicitud'] ?? 'PENDIENTE';
 
             return Card(
-              margin: const EdgeInsets.only(bottom: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              elevation: 2,
-              child: Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.network(
-                        fotoUrl,
-                        width: 80,
-                        height: 110,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => Container(
-                          width: 80, height: 110, color: Colors.grey[300],
-                          child: const Icon(Icons.book, color: Colors.grey),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(titulo, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold), maxLines: 2, overflow: TextOverflow.ellipsis),
-                          const SizedBox(height: 4),
-                          Text(autor, style: TextStyle(color: Colors.grey[700], fontSize: 13)),
-                          const SizedBox(height: 4),
-                          Text('Materia: $materia', style: TextStyle(color: Colors.red[800], fontSize: 12, fontWeight: FontWeight.w500)),
-                          const SizedBox(height: 12),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.cancel, color: Colors.red, size: 30),
-                                onPressed: () => _gestionarPublicacion(doc.id, usuarioId, 'RECHAZADO'),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.check_circle, color: Colors.green, size: 30),
-                                onPressed: () => _gestionarPublicacion(doc.id, usuarioId, 'DISPONIBLE'), 
-                              ),
-                            ],
-                          )
-                        ],
-                      ),
+              margin: const EdgeInsets.only(bottom: 12),
+              child: ListTile(
+                leading: const Icon(Icons.person_search, color: Colors.red),
+                title: Text(sol['tituloLibro'] ?? 'Libro pedido'),
+                subtitle: Text('Estado: $estado'),
+                trailing: estado == 'PENDIENTE' 
+                  ? Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(icon: const Icon(Icons.check_circle, color: Colors.green), onPressed: () => _procesarSolicitudPrestamo(doc.id, sol['libroId'], 'ACEPTADO')),
+                        IconButton(icon: const Icon(Icons.cancel, color: Colors.red), onPressed: () => _procesarSolicitudPrestamo(doc.id, sol['libroId'], 'RECHAZADO')),
+                      ],
                     )
-                  ],
-                ),
+                  : Icon(estado == 'ACEPTADO' ? Icons.check : Icons.close, color: Colors.grey),
               ),
             );
           },
         );
       },
+    );
+  }
+
+  Widget _vistaVacia(String mensaje) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.inbox, size: 80, color: Colors.grey[400]),
+          const SizedBox(height: 16),
+          Text(mensaje, style: TextStyle(fontSize: 18, color: Colors.grey[600])),
+        ],
+      ),
+    );
+  }
+
+  Widget _tarjetaModeracion(String docId, Map<String, dynamic> libro) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.network(libro['fotoUrl'] ?? '', width: 70, height: 90, fit: BoxFit.cover, 
+                errorBuilder: (c, e, s) => Container(width: 70, height: 90, color: Colors.grey[300], child: const Icon(Icons.book))),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(libro['titulo'] ?? 'Sin título', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  Text(libro['autor'] ?? 'Autor desconocido', style: const TextStyle(fontSize: 12)),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      IconButton(icon: const Icon(Icons.cancel, color: Colors.red), onPressed: () => _gestionarPublicacion(docId, libro['usuarioId'], 'RECHAZADO')),
+                      IconButton(icon: const Icon(Icons.check_circle, color: Colors.green), onPressed: () => _gestionarPublicacion(docId, libro['usuarioId'], 'DISPONIBLE')),
+                    ],
+                  )
+                ],
+              ),
+            )
+          ],
+        ),
+      ),
     );
   }
 
@@ -226,78 +278,33 @@ class _AdminScreenState extends State<AdminScreen> {
         child: user == null ? const Center(child: Text('No hay usuario activo')) : StreamBuilder<DocumentSnapshot>(
           stream: FirebaseFirestore.instance.collection('usuarios').doc(user!.uid).snapshots(),
           builder: (context, snapshot) {
-            if (snapshot.hasError) {
-              return const Center(child: Text('Error al cargar datos del usuario'));
-            }
-
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator(color: Colors.red));
-            }
-
-            String nombre = 'Administrador';
-            String apellido = '';
-            String email = user?.email ?? '';
-
-            if (snapshot.hasData && snapshot.data!.exists) {
-              var userData = snapshot.data!.data() as Map<String, dynamic>? ?? {};
-              nombre = userData['nombre'] ?? 'Administrador';
-              apellido = userData['apellido'] ?? '';
-              email = userData['email'] ?? user?.email ?? '';
-            }
-            
+            if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+            var userData = snapshot.data!.data() as Map<String, dynamic>? ?? {};
             return ListView(
               padding: EdgeInsets.zero,
               children: [
                 UserAccountsDrawerHeader(
                   decoration: BoxDecoration(color: Colors.red[800]),
-                  accountName: Text('$nombre $apellido'.trim(), style: const TextStyle(fontWeight: FontWeight.bold)),
-                  accountEmail: Text(email),
-                  currentAccountPicture: const CircleAvatar(backgroundColor: Colors.white, child: Icon(Icons.admin_panel_settings, size: 40, color: Colors.red)),
+                  accountName: Text('${userData['nombre'] ?? 'Admin'} ${userData['apellido'] ?? ''}'),
+                  accountEmail: Text(user?.email ?? ''),
+                  currentAccountPicture: const CircleAvatar(backgroundColor: Colors.white, child: Icon(Icons.admin_panel_settings, color: Colors.red)),
                 ),
-                
-                ListTile(
-                  leading: const Icon(Icons.favorite, color: Colors.redAccent),
-                  title: const Text('Mi Lista de Deseos'),
-                  onTap: () {
-                    Navigator.pop(context); 
-                    Navigator.push(context, MaterialPageRoute(builder: (context) => const ListaDeseosScreen()));
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.book, color: Colors.orange),
-                  title: const Text('Mis Publicaciones'),
-                  onTap: () {
-                    Navigator.pop(context); 
-                    Navigator.push(context, MaterialPageRoute(builder: (context) => const MisPublicacionesScreen()));
-                  },
-                ),
+                ListTile(leading: const Icon(Icons.favorite, color: Colors.redAccent), title: const Text('Mi Lista de Deseos'), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const ListaDeseosScreen()))),
+                ListTile(leading: const Icon(Icons.book, color: Colors.orange), title: const Text('Mis Publicaciones'), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const MisPublicacionesScreen()))),
                 const Divider(),
-
-                ListTile(
-                  leading: const Icon(Icons.logout, color: Colors.red),
-                  title: const Text('Cerrar Sesión', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-                  onTap: _cerrarSesion,
-                ),
+                ListTile(leading: const Icon(Icons.logout, color: Colors.red), title: const Text('Cerrar Sesión'), onTap: _cerrarSesion),
               ],
             );
           },
         ),
       ),
       body: _obtenerCuerpoPantalla(),
-      
-      // --- CORAZONCITO FLOTANTE FIJADO ABAJO A LA DERECHA ---
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat, // <- ESTO LO ANCLA ABAJO A LA DERECHA
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(context, MaterialPageRoute(builder: (context) => const ListaDeseosScreen()));
-        },
+        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const ListaDeseosScreen())),
         backgroundColor: Colors.white,
-        elevation: 6, // Un poco más de sombra para que resalte
-        shape: const CircleBorder(), // Hace que el botón sea perfectamente redondo
-        tooltip: 'Ver Lista de Deseos',
-        child: const Icon(Icons.favorite, color: Colors.red, size: 30), // Ícono un poco más grande
+        shape: const CircleBorder(),
+        child: const Icon(Icons.favorite, color: Colors.red, size: 30),
       ),
-      
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _indiceSeleccionado,
         onTap: _onItemTapped,
