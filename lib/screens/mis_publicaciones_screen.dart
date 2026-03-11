@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'publicar_screen.dart'; // Importante para la edición completa
+import 'publicar_screen.dart';
 
 class MisPublicacionesScreen extends StatefulWidget {
   const MisPublicacionesScreen({super.key});
@@ -38,7 +38,6 @@ class _MisPublicacionesScreenState extends State<MisPublicacionesScreen> {
     );
   }
 
-  // CAMBIO JUSTO: Ahora redirige a la pantalla de edición completa que ya tienes
   void _editarPublicacionCompleta(Map<String, dynamic> libroData, String docId) {
     Navigator.push(
       context,
@@ -58,7 +57,7 @@ class _MisPublicacionesScreenState extends State<MisPublicacionesScreen> {
       appBar: AppBar(
         title: const Text('Mis Publicaciones', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.white,
-        foregroundColor: Colors.red[800], // CAMBIO: Color institucional
+        foregroundColor: Colors.orange[800],
         elevation: 1,
       ),
       body: StreamBuilder<QuerySnapshot>(
@@ -94,7 +93,7 @@ class _MisPublicacionesScreenState extends State<MisPublicacionesScreen> {
 
               return _HoverMiPublicacionCard(
                 libroData: libroData,
-                onEdit: () => _editarPublicacionCompleta(libroData, idDoc), // USAR EDICIÓN COMPLETA
+                onEdit: () => _editarPublicacionCompleta(libroData, idDoc),
                 onDelete: () => _confirmarEliminacion(idDoc),
               );
             },
@@ -121,13 +120,12 @@ class _HoverMiPublicacionCardState extends State<_HoverMiPublicacionCard> {
 
   @override
   Widget build(BuildContext context) {
-    // CAMBIO JUSTO: Añadido estado PENDING/PENDIENTE al visualizador
     String estado = (widget.libroData['estado'] ?? 'PENDIENTE').toString().toUpperCase();
     
     Color colorEstado = Colors.grey;
     if (estado == 'DISPONIBLE') colorEstado = Colors.green;
     if (estado == 'RESERVADO') colorEstado = Colors.blue;
-    if (estado == 'PENDIENTE') colorEstado = Colors.orange; // El nuevo estado de revisión
+    if (estado == 'PENDIENTE') colorEstado = Colors.orange;
 
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovering = true),

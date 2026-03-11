@@ -1,4 +1,4 @@
-import 'dart:typed_data'; // Añadir para los bytes de la imagen
+import 'dart:typed_data';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:supabase_flutter/supabase_flutter.dart'; 
@@ -7,15 +7,13 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final SupabaseClient _supabase = Supabase.instance.client; 
-
-  // Registrar usuario (AHORA RECIBE LOS BYTES DE LA FOTO)
   Future<void> registrarUsuario({
     required String nombre,
     required String apellido,
     required String cedula,
     required String email,
     required String password,
-    Uint8List? fotoBytes, // <-- Recibimos el archivo, no el URL
+    Uint8List? fotoBytes,
   }) async {
     try {
       String fotoUrl = '';
@@ -47,7 +45,7 @@ class AuthService {
         'apellido': apellido, 
         'cedula': cedula,
         'email': email,
-        'fotoPerfil': fotoUrl, // Pasamos el URL generado arriba
+        'fotoPerfil': fotoUrl,
         'estaActivo': true,
         'rol': rolAsignado,
       });

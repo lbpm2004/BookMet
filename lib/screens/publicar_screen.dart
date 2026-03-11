@@ -96,12 +96,12 @@ class _PublicarScreenState extends State<PublicarScreen> {
 
   Future<String?> _subirImagenSupabase(Uint8List bytes, String fileName, String folder) async {
     try {
-      final String fullPath = 'imagenes/${DateTime.now().millisecondsSinceEpoch}_$fileName';
+      final String fullPath = '$folder/${DateTime.now().millisecondsSinceEpoch}_$fileName';
       await Supabase.instance.client.storage
-          .from('publicaciones')
+          .from('imagenes_libros')
           .uploadBinary(fullPath, bytes);
       return Supabase.instance.client.storage
-          .from('publicaciones')
+          .from('imagenes_libros')
           .getPublicUrl(fullPath);
     } catch (e) {
       debugPrint("Error subiendo imagen a Supabase: $e");
@@ -149,8 +149,7 @@ class _PublicarScreenState extends State<PublicarScreen> {
       };
 
       if (widget.docId == null) {
-        // CAMBIO JUSTO: El libro entra como PENDIENTE
-        datosLibro['estado'] = 'Pendiente'; 
+        datosLibro['estado'] = 'PENDIENTE'; 
         await FirebaseFirestore.instance.collection('publicaciones').add(datosLibro);
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -196,7 +195,7 @@ class _PublicarScreenState extends State<PublicarScreen> {
       appBar: AppBar(
         title: Text(widget.docId != null ? 'Editar Publicación' : 'Aportar Libro'),
         backgroundColor: Colors.white,
-        foregroundColor: Colors.red[800], // CAMBIO: Color institucional
+        foregroundColor: Colors.orange[800], 
         elevation: 1,
       ),
       body: SingleChildScrollView(
@@ -289,7 +288,7 @@ class _PublicarScreenState extends State<PublicarScreen> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                value: _carreraSeleccionada, // CAMBIO: 'value' para evitar errores de estado
+                initialValue: _carreraSeleccionada,
                 decoration: const InputDecoration(labelText: 'Carrera', border: OutlineInputBorder()),
                 items: _carreras.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
                 onChanged: (value) => setState(() => _carreraSeleccionada = value),
@@ -297,7 +296,7 @@ class _PublicarScreenState extends State<PublicarScreen> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                value: _materiaSeleccionada, // CAMBIO: 'value'
+                initialValue: _materiaSeleccionada,
                 decoration: const InputDecoration(labelText: 'Materia', border: OutlineInputBorder()),
                 items: _materias.map((m) => DropdownMenuItem(value: m, child: Text(m))).toList(),
                 onChanged: (value) => setState(() => _materiaSeleccionada = value),
@@ -305,7 +304,7 @@ class _PublicarScreenState extends State<PublicarScreen> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                value: _estadoSeleccionado, // CAMBIO: 'value'
+                initialValue: _estadoSeleccionado,
                 decoration: const InputDecoration(labelText: 'Estado físico', border: OutlineInputBorder()),
                 items: _opcionesEstado.map((e) => DropdownMenuItem(value: e, child: Text(e.replaceAll('_', ' ').toUpperCase()))).toList(),
                 onChanged: (val) => setState(() => _estadoSeleccionado = val),
@@ -331,7 +330,7 @@ class _PublicarScreenState extends State<PublicarScreen> {
                       child: ElevatedButton(
                         onPressed: _enviarSolicitud,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red[800], // CAMBIO: Color institucional
+                          backgroundColor: Colors.orange[800],
                           padding: const EdgeInsets.symmetric(vertical: 18),
                         ),
                         child: Text(widget.docId != null ? 'GUARDAR CAMBIOS' : 'ENVIAR A REVISIÓN', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),

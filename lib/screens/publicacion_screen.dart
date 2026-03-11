@@ -106,7 +106,6 @@ class _PublicarScreenState extends State<PublicarScreen> {
         final String userId = FirebaseAuth.instance.currentUser?.uid ?? '';
         if (userId.isEmpty) throw Exception('Debes iniciar sesión.');
 
-        // 1. Manejo de URLs de imágenes
         String? urlPortada = widget.libroAEditar?['fotoUrl'] ?? 'https://via.placeholder.com/300x400.png?text=Sin+Portada';
         String? urlContraportada = widget.libroAEditar?['contraportadaUrl'];
 
@@ -120,7 +119,6 @@ class _PublicarScreenState extends State<PublicarScreen> {
           if (intentoSubida != null) urlContraportada = intentoSubida;
         }
 
-        // 2. Preparar el mapa de datos
         final Map<String, dynamic> datosLibro = {
           'titulo': _nombreController.text.trim(),
           'autor': _autoresController.text.trim(),
@@ -131,11 +129,10 @@ class _PublicarScreenState extends State<PublicarScreen> {
           'fotoUrl': urlPortada, 
           'contraportadaUrl': urlContraportada,
           'usuarioId': userId, 
-          'estado': 'DISPONIBLE', // CAMBIADO: Se pone disponible directo para que se vea en el catálogo
+          'estado': 'DISPONIBLE',
           'fechaActualizacion': FieldValue.serverTimestamp(),
         };
 
-        // 3. Guardar en Firestore
         if (widget.docId != null) {
           await FirebaseFirestore.instance.collection('publicaciones').doc(widget.docId).update(datosLibro);
         } else {
@@ -224,7 +221,6 @@ class _PublicarScreenState extends State<PublicarScreen> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Columna Izquierda: Fotos e Info
                   Expanded(
                     flex: 35,
                     child: Column(
@@ -237,7 +233,6 @@ class _PublicarScreenState extends State<PublicarScreen> {
                     ),
                   ),
                   const SizedBox(width: 24),
-                  // Columna Derecha: Campos de Texto
                   Expanded(
                     flex: 65,
                     child: Column(

@@ -33,8 +33,6 @@ class _AdminScreenState extends State<AdminScreen> {
     if (!mounted) return;
     Navigator.pushReplacementNamed(context, '/login'); 
   }
-
-  // --- 1. LÓGICA DE MODERACIÓN (Para libros nuevos que se suben) ---
   Future<void> _gestionarPublicacion(String publicacionId, String usuarioId, String nuevoEstado) async {
     try {
       final publicacionRef = FirebaseFirestore.instance.collection('publicaciones').doc(publicacionId);
@@ -69,15 +67,12 @@ class _AdminScreenState extends State<AdminScreen> {
     }
   }
 
-  // --- 2. NUEVA LÓGICA DE GESTIÓN DE PRÉSTAMOS (Admin decide quién recibe el libro) ---
   Future<void> _procesarSolicitudPrestamo(String solicitudId, String libroId, String nuevoEstado) async {
     try {
-      // Actualizar la solicitud
       await FirebaseFirestore.instance.collection('solicitudes').doc(solicitudId).update({
         'estadoSolicitud': nuevoEstado,
       });
 
-      // Actualizar el libro: si se acepta queda "PRESTADO", si se rechaza vuelve a "DISPONIBLE"
       String estadoLibro = (nuevoEstado == 'ACEPTADO') ? 'PRESTADO' : 'DISPONIBLE';
       await FirebaseFirestore.instance.collection('publicaciones').doc(libroId).update({
         'estado': estadoLibro,
@@ -92,7 +87,6 @@ class _AdminScreenState extends State<AdminScreen> {
     }
   }
 
-  // --- VISTAS DEL ADMIN ---
   Widget _construirVistaInicio() {
     return Center(
       child: Column(
@@ -107,10 +101,9 @@ class _AdminScreenState extends State<AdminScreen> {
     );
   }
 
-  // VENTANA DE SOLICITUDES ACTUALIZADA CON 3 SECCIONES
   Widget _construirVentanaSolicitudes() {
     return DefaultTabController(
-      length: 3, // Aumentado a 3
+      length: 3,
       child: Column(
         children: [
           const TabBar(
@@ -124,9 +117,9 @@ class _AdminScreenState extends State<AdminScreen> {
           Expanded(
             child: TabBarView(
               children: [
-                _construirListaModeracion(), // Moderación de publicaciones
-                _construirListaSolicitudesGlobales(), // Gestión de quién pide qué (Biblioteca)
-                const MisSolicitudesScreen(), // Tus solicitudes personales
+                _construirListaModeracion(),
+                _construirListaSolicitudesGlobales(),
+                const MisSolicitudesScreen(),
               ],
             ),
           )
@@ -135,7 +128,6 @@ class _AdminScreenState extends State<AdminScreen> {
     );
   }
 
-  // 1. LISTA PARA MODERAR LIBROS NUEVOS
   Widget _construirListaModeracion() {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
@@ -159,7 +151,6 @@ class _AdminScreenState extends State<AdminScreen> {
     );
   }
 
-  // 2. LISTA PARA GESTIONAR QUIÉN PIDE LOS LIBROS (Biblioteca Centralizada)
   Widget _construirListaSolicitudesGlobales() {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance

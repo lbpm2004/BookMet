@@ -16,8 +16,6 @@ class PerfilScreen extends StatefulWidget {
 
 class _PerfilScreenState extends State<PerfilScreen> {
   final User? user = FirebaseAuth.instance.currentUser;
-  
-  // Controladores para los campos de texto
   final TextEditingController _nombreController = TextEditingController();
   final TextEditingController _apellidoController = TextEditingController();
   final TextEditingController _cedulaController = TextEditingController();
@@ -25,7 +23,6 @@ class _PerfilScreenState extends State<PerfilScreen> {
 
   bool _isSaving = false;
   String _fotoUrl = ''; 
-  //File? _imagenBytes; // Para guardar la foto nueva antes de subirla
   Uint8List? _imagenBytes;
 
   // Contadores de historial
@@ -81,7 +78,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
                 Navigator.pop(context);
                 final XFile? image = await picker.pickImage(source: ImageSource.gallery, imageQuality: 50);
                 if (image != null) {
-                final bytes = await image.readAsBytes(); // <--- LEEMOS BYTES
+                final bytes = await image.readAsBytes(); 
                 setState(() => _imagenBytes = bytes);
               }
               },
@@ -93,7 +90,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
                 Navigator.pop(context);
                 final XFile? image = await picker.pickImage(source: ImageSource.camera, imageQuality: 50);
                 if (image != null) {
-                final bytes = await image.readAsBytes(); // <--- LEEMOS BYTES
+                final bytes = await image.readAsBytes(); 
                 setState(() => _imagenBytes = bytes);
               }
               },
@@ -109,12 +106,7 @@ Future<String?> _subirFotoASupabase() async {
   if (_imagenBytes == null || user == null) return null;
 
   try {
-    // Usamos el UID del usuario como nombre de archivo para que cada usuario tenga solo UNA foto
-    // y la nueva sobrescriba la vieja.
     final String fileName = '${user!.uid}.jpg';
-    
-    // Subir el archivo al bucket "perfiles"
-    // 'upsert: true' permite sobrescribir el archivo si ya existe
     await Supabase.instance.client.storage
         .from('perfiles')
         .uploadBinary(
@@ -127,9 +119,6 @@ Future<String?> _subirFotoASupabase() async {
     final String publicUrl = Supabase.instance.client.storage
         .from('perfiles')
         .getPublicUrl(fileName);
-
-    // Agregamos un timestamp al final para "engañar" al cache de Flutter 
-    // y que la imagen se actualice inmediatamente en la pantalla
     return '$publicUrl?t=${DateTime.now().millisecondsSinceEpoch}';
     
   } catch (e) {
@@ -171,11 +160,10 @@ Future<String?> _subirFotoASupabase() async {
         const SnackBar(content: Text('¡Perfil actualizado con éxito! ✅'), backgroundColor: Colors.green),
       );
 
-      // Actualizamos la vista local si hubo cambio de foto
       if (nuevaFotoUrl != null) {
         setState(() {
           _fotoUrl = nuevaFotoUrl!;
-          _imagenBytes = null; // Limpiamos la selección
+          _imagenBytes = null;
         });
       }
 
@@ -191,7 +179,6 @@ Future<String?> _subirFotoASupabase() async {
     }
   }
 
-  // Construye las tarjetitas pequeñas del historial
   Widget _buildStatCard(String title, String count, Color textColor) {
     return Expanded(
       child: Container(
@@ -234,7 +221,6 @@ Future<String?> _subirFotoASupabase() async {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // --- FOTO DE PERFIL ---
                       Center(
                         child: Column(
                           children: [
@@ -246,7 +232,6 @@ Future<String?> _subirFotoASupabase() async {
                               child: CircleAvatar(
                                 radius: 45, 
                                 backgroundColor: Colors.orange[50],
-                                // Muestra la foto seleccionada, o si no, la de Firebase, o icono
                                 backgroundImage: _imagenBytes != null
                                     ? MemoryImage(_imagenBytes!)
                                     : (_fotoUrl.isNotEmpty ? NetworkImage(_fotoUrl) : null) as ImageProvider?,
@@ -257,7 +242,7 @@ Future<String?> _subirFotoASupabase() async {
                             ),
                             const SizedBox(height: 8),
                             TextButton.icon(
-                              onPressed: _seleccionarImagen, // ¡VUELVE A FUNCIONAR!
+                              onPressed: _seleccionarImagen,
                               icon: const Icon(Icons.camera_alt, size: 18, color: Colors.orange),
                               label: const Text('Cambiar Foto', style: TextStyle(color: Colors.orange, fontSize: 14)),
                             ),
@@ -337,12 +322,11 @@ Future<String?> _subirFotoASupabase() async {
 
                       const SizedBox(height: 32), 
 
-                      // --- BOTÓN GUARDAR ---
                       SizedBox(
                         width: double.infinity,
                         height: 50, 
                         child: ElevatedButton.icon(
-                          onPressed: _isSaving ? null : _guardarCambios, // ¡AQUÍ SE GUARDA TODO!
+                          onPressed: _isSaving ? null : _guardarCambios,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.orange[800],
                             foregroundColor: Colors.white,

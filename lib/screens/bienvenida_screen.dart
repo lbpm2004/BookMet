@@ -4,36 +4,28 @@ import 'package:firebase_auth/firebase_auth.dart';
 class BienvenidaScreen extends StatelessWidget {
   const BienvenidaScreen({super.key});
 
-  // Definimos los colores del diseño
   final Color kPrimaryOrange = const Color(0xFFFF8200); 
   final Color kDarkBlue = const Color(0xFF003087);      
 
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    final User? user = FirebaseAuth.instance.currentUser; // Verificamos sesión
+    final User? user = FirebaseAuth.instance.currentUser;
 
     return Scaffold(
       backgroundColor: Colors.white, 
-      // Se eliminó el Drawer (menú desplegable) de aquí
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children:[
-            // 1. Barra de Navegación Superior
             _buildNavBar(context, user),
 
             const SizedBox(height: 60),
-
-            // 2. Contenido Principal (Texto Central)
             _buildMainContent(size),
 
             const SizedBox(height: 40),
-
-            // 3. Ilustración
             _buildFooterIllustration(size),
 
-            // 4. Misión y Visión (Acerca de)
             Transform.translate( 
               offset: const Offset(0, -1),
               child: Container(
@@ -71,7 +63,6 @@ class BienvenidaScreen extends StatelessWidget {
     );
   }
 
-  // --- Barra de Navegación ---
   Widget _buildNavBar(BuildContext context, User? user) {
     return Container(
       decoration: const BoxDecoration(
@@ -83,20 +74,17 @@ class BienvenidaScreen extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 40.0, vertical: 20.0),
       child: Row(
         children:[
-          // Se eliminó el IconButton (hamburguesa) de la esquina superior izquierda
           Icon(Icons.local_library_rounded, color: kPrimaryOrange, size: 40),
           const SizedBox(width: 10),
           Text('BOOKMET', style: TextStyle(color: kPrimaryOrange, fontSize: 22, fontWeight: FontWeight.bold)),
           
-          const Spacer(), // Empuja los botones hacia la derecha
-          // Se eliminó el botón "Inicio" de aquí
+          const Spacer(), 
 
-          // Botones si NO hay sesión
           if (user == null) ...[
             ElevatedButton(
               onPressed: () => Navigator.pushNamed(context, '/login'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: kDarkBlue, // Mismo color (Azul oscuro)
+                backgroundColor: kDarkBlue,
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
               ),
               child: const Text('Iniciar sesión', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
@@ -105,20 +93,19 @@ class BienvenidaScreen extends StatelessWidget {
             ElevatedButton(
               onPressed: () => Navigator.pushNamed(context, '/registro'),            
               style: ElevatedButton.styleFrom(
-                backgroundColor: kDarkBlue, // Cambiado al mismo color que Iniciar Sesión
+                backgroundColor: kDarkBlue,
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
               ),
               child: const Text('Registrarse', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             )
           ] 
-          // Botones si SÍ hay sesión
           else ...[
             ElevatedButton.icon(
               onPressed: () => Navigator.pushReplacementNamed(context, '/usuario'),
               icon: const Icon(Icons.dashboard, color: Colors.white),
               label: const Text('Ir al Panel', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
               style: ElevatedButton.styleFrom(
-                backgroundColor: kDarkBlue, // Unificado al azul oscuro
+                backgroundColor: kDarkBlue,
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18)
               )
             ),
@@ -168,7 +155,6 @@ class BienvenidaScreen extends StatelessWidget {
     );
   }
 
-  // --- Acerca De ---
   Widget _buildTextContent() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

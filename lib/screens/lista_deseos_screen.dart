@@ -32,7 +32,6 @@ class _ListaDeseosScreenState extends State<ListaDeseosScreen> {
         foregroundColor: Colors.orange[800],
         elevation: 1,
       ),
-      // Usamos un StreamBuilder para escuchar los favoritos del usuario en tiempo real
       body: StreamBuilder<DocumentSnapshot>(
         stream: FirebaseFirestore.instance.collection('usuarios').doc(user!.uid).snapshots(),
         builder: (context, snapshotUsuario) {
@@ -44,7 +43,6 @@ class _ListaDeseosScreenState extends State<ListaDeseosScreen> {
             return const Center(child: Text('Error al cargar tu lista.'));
           }
 
-          // Obtenemos la lista de IDs de los libros favoritos
           List<dynamic> favoritos = snapshotUsuario.data!.get('favoritos') ?? [];
 
           if (favoritos.isEmpty) {
@@ -66,8 +64,6 @@ class _ListaDeseosScreenState extends State<ListaDeseosScreen> {
             itemCount: favoritos.length,
             itemBuilder: (context, index) {
               String pubId = favoritos[index];
-
-              // Por cada ID, buscamos los datos del libro en la colección 'publicaciones'
               return FutureBuilder<DocumentSnapshot>(
                 future: FirebaseFirestore.instance.collection('publicaciones').doc(pubId).get(),
                 builder: (context, snapshotPublicacion) {
@@ -79,7 +75,7 @@ class _ListaDeseosScreenState extends State<ListaDeseosScreen> {
                   }
 
                   if (!snapshotPublicacion.hasData || !snapshotPublicacion.data!.exists) {
-                    return const SizedBox.shrink(); // Si el libro fue borrado de la app, no mostramos nada
+                    return const SizedBox.shrink();
                   }
 
                   var publicacion = snapshotPublicacion.data!.data() as Map<String, dynamic>;
@@ -99,7 +95,7 @@ class _ListaDeseosScreenState extends State<ListaDeseosScreen> {
                       subtitle: Text(autor),
                       trailing: IconButton(
                         icon: const Icon(Icons.favorite, color: Colors.red),
-                        onPressed: () => _quitarDeFavoritos(pubId), // Al tocar, lo borra
+                        onPressed: () => _quitarDeFavoritos(pubId),
                       ),
                     ),
                   );
