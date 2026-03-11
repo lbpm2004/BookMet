@@ -98,7 +98,7 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
               // --- CAMBIO PRINCIPAL AQUÍ: ACEPTAMOS DISPONIBLES Y RESERVADOS ---
               stream: FirebaseFirestore.instance
                   .collection('publicaciones')
-                  .where('estado', whereIn: ['DISPONIBLE', 'RESERVADO'])
+                  .where('estado', whereIn: ['DISPONIBLE', 'RESERVADO', 'PAUSADO'])
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -230,7 +230,8 @@ class _HoverBookCardState extends State<_HoverBookCard> {
 
   @override
   Widget build(BuildContext context) {
-    bool esReservado = widget.libroData['estado'] == 'RESERVADO';
+    bool esReservado = widget.libroData['estado'] == 'RESERVADO' || widget.libroData['estado'] == 'PAUSADO';
+    String textoEtiqueta = widget.libroData['estado'] ?? 'NO DISPONIBLE';
 
     return MouseRegion(
       // Si está reservado, quitamos la manito de click para indicar que no está disponible
@@ -315,8 +316,8 @@ class _HoverBookCardState extends State<_HoverBookCard> {
                           bottomLeft: Radius.circular(8),
                         ),
                       ),
-                      child: const Text(
-                        'RESERVADO',
+                      child: Text(
+                        textoEtiqueta,
                         style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
                       ),
                     ),
