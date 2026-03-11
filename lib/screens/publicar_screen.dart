@@ -153,11 +153,15 @@ class _PublicarScreenState extends State<PublicarScreen> {
       };
 
       if (widget.docId == null) {
-        datosLibro['estado'] = 'DISPONIBLE'; 
+        // --- AQUÍ ESTÁ EL CAMBIO DE MODERACIÓN ---
+        datosLibro['estado'] = 'Pendiente'; 
         await FirebaseFirestore.instance.collection('publicaciones').add(datosLibro);
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Libro publicado con éxito ✅'), backgroundColor: Colors.green),
+          const SnackBar(
+            content: Text('Libro enviado a revisión 🕒. Un administrador lo aprobará pronto.'), 
+            backgroundColor: Colors.blueAccent
+          ),
         );
       } else {
         await FirebaseFirestore.instance.collection('publicaciones').doc(widget.docId).update(datosLibro);
