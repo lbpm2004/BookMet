@@ -1,9 +1,11 @@
 import 'dart:io';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart'; 
 import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 
 class PerfilScreen extends StatefulWidget {
   const PerfilScreen({super.key});
@@ -23,8 +25,9 @@ class _PerfilScreenState extends State<PerfilScreen> {
 
   bool _isSaving = false;
   String _fotoUrl = ''; 
-  File? _imagenSeleccionada; // Para guardar la foto nueva antes de subirla
-  
+  //File? _imagenBytes; // Para guardar la foto nueva antes de subirla
+  Uint8List? _imagenBytes;
+
   // Contadores de historial
   int _totalIntercambios = 0;
   int _aprobadas = 0;
@@ -77,7 +80,10 @@ class _PerfilScreenState extends State<PerfilScreen> {
               onTap: () async {
                 Navigator.pop(context);
                 final XFile? image = await picker.pickImage(source: ImageSource.gallery, imageQuality: 50);
-                if (image != null) setState(() => _imagenSeleccionada = File(image.path));
+                if (image != null) {
+                final bytes = await image.readAsBytes(); // <--- LEEMOS BYTES
+                setState(() => _imagenBytes = bytes);
+              }
               },
             ),
             ListTile(
@@ -86,7 +92,10 @@ class _PerfilScreenState extends State<PerfilScreen> {
               onTap: () async {
                 Navigator.pop(context);
                 final XFile? image = await picker.pickImage(source: ImageSource.camera, imageQuality: 50);
-                if (image != null) setState(() => _imagenSeleccionada = File(image.path));
+                if (image != null) {
+                final bytes = await image.readAsBytes(); // <--- LEEMOS BYTES
+                setState(() => _imagenBytes = bytes);
+              }
               },
             ),
           ],
@@ -95,27 +104,40 @@ class _PerfilScreenState extends State<PerfilScreen> {
     );
   }
 
-  // --- LÓGICA PARA SUBIR FOTO A FIREBASE STORAGE ---
-  Future<String?> _subirFotoAFirebaseStorage() async {
-    if (_imagenSeleccionada == null) return null;
+// --- LÓGICA PARA SUBIR FOTO A SUPABASE STORAGE ---
+Future<String?> _subirFotoASupabase() async {
+  if (_imagenBytes == null || user == null) return null;
 
-    try {
-      final storageRef = FirebaseStorage.instance
-          .ref()
-          .child('usuarios')
-          .child(user!.uid)
-          .child('perfil.jpg');
+  try {
+    // Usamos el UID del usuario como nombre de archivo para que cada usuario tenga solo UNA foto
+    // y la nueva sobrescriba la vieja.
+    final String fileName = '${user!.uid}.jpg';
+    
+    // Subir el archivo al bucket "perfiles"
+    // 'upsert: true' permite sobrescribir el archivo si ya existe
+    await Supabase.instance.client.storage
+        .from('perfiles')
+        .uploadBinary(
+          fileName, 
+          _imagenBytes!,
+          fileOptions: const FileOptions(upsert: true),
+        );
 
-      UploadTask uploadTask = storageRef.putFile(_imagenSeleccionada!);
-      TaskSnapshot snapshot = await uploadTask;
+    // Obtener la URL pública (esta es la que guardaremos en Firestore)
+    final String publicUrl = Supabase.instance.client.storage
+        .from('perfiles')
+        .getPublicUrl(fileName);
 
-      String downloadUrl = await snapshot.ref.getDownloadURL();
-      return downloadUrl;
-    } catch (e) {
-      print("Error subiendo foto: $e");
-      return null;
-    }
+    // Agregamos un timestamp al final para "engañar" al cache de Flutter 
+    // y que la imagen se actualice inmediatamente en la pantalla
+    return '$publicUrl?t=${DateTime.now().millisecondsSinceEpoch}';
+    
+  } catch (e) {
+    debugPrint("Error subiendo foto a Supabase: $e");
+    return null;
   }
+}
+
 
   // Guarda los cambios en Firebase (Texto e Imagen)
   Future<void> _guardarCambios() async {
@@ -125,8 +147,8 @@ class _PerfilScreenState extends State<PerfilScreen> {
       String? nuevaFotoUrl;
       
       // 1. Si eligió una foto nueva, la subimos a Storage
-      if (_imagenSeleccionada != null) {
-        nuevaFotoUrl = await _subirFotoAFirebaseStorage();
+      if (_imagenBytes != null) {
+        nuevaFotoUrl = await _subirFotoASupabase();
       }
 
       // 2. Preparamos los datos de texto a actualizar
@@ -153,7 +175,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
       if (nuevaFotoUrl != null) {
         setState(() {
           _fotoUrl = nuevaFotoUrl!;
-          _imagenSeleccionada = null; // Limpiamos la selección
+          _imagenBytes = null; // Limpiamos la selección
         });
       }
 
@@ -225,10 +247,10 @@ class _PerfilScreenState extends State<PerfilScreen> {
                                 radius: 45, 
                                 backgroundColor: Colors.orange[50],
                                 // Muestra la foto seleccionada, o si no, la de Firebase, o icono
-                                backgroundImage: _imagenSeleccionada != null
-                                    ? FileImage(_imagenSeleccionada!)
+                                backgroundImage: _imagenBytes != null
+                                    ? MemoryImage(_imagenBytes!)
                                     : (_fotoUrl.isNotEmpty ? NetworkImage(_fotoUrl) : null) as ImageProvider?,
-                                child: (_imagenSeleccionada == null && _fotoUrl.isEmpty)
+                                child: (_imagenBytes == null && _fotoUrl.isEmpty)
                                     ? Icon(Icons.person, size: 45, color: Colors.orange[400])
                                     : null,
                               ),
