@@ -25,16 +25,33 @@ class _DetalleLibroScreenState extends State<DetalleLibroScreen> {
   void _checkIfFavorite() async {
     if (user == null) return;
     
-    final userDoc = await FirebaseFirestore.instance
-        .collection('usuarios')
-        .doc(user!.uid)
-        .get();
+    try {
+      // Intentamos pedirle el documento a Firebase
+      final userDoc = await FirebaseFirestore.instance
+          .collection('usuarios')
+          .doc(user!.uid)
+          .get();
 
-    if (userDoc.exists) {
-      List<dynamic> favoritos = userDoc.get('favoritos') ?? [];
+      if (userDoc.exists) {
+        var data = userDoc.data() as Map<String, dynamic>?;
+        
+        List<dynamic> favoritos = (data != null && data.containsKey('favoritos')) 
+            ? data['favoritos'] 
+            : [];
+            
+        if (mounted) {
+          setState(() {
+            isFavorite = favoritos.contains(widget.docId);
+          });
+        }
+      }
+    } catch (e) {
+      // SI OCURRE UN ERROR (Permisos, no existe, etc.), LA APP CAE AQUÍ EN LUGAR DE CONGELARSE
+      debugPrint('Error silencioso al cargar favoritos: $e');
+      // Simplemente lo dejamos como NO favorito y la app sigue funcionando normal
       if (mounted) {
         setState(() {
-          isFavorite = favoritos.contains(widget.docId);
+          isFavorite = false;
         });
       }
     }
@@ -45,33 +62,49 @@ class _DetalleLibroScreenState extends State<DetalleLibroScreen> {
 
     final userRef = FirebaseFirestore.instance.collection('usuarios').doc(user!.uid);
 
-    if (isFavorite) {
-      await userRef.update({
-        'favoritos': FieldValue.arrayRemove([widget.docId])
-      });
-      _showSnackBar('Eliminado de tu lista 💔', Colors.redAccent);
-    } else {
-      await userRef.update({
-        'favoritos': FieldValue.arrayUnion([widget.docId])
-      });
-      _showSnackBar('¡Agregado a tu lista! ❤️', Colors.orange);
-    }
-
+    // Actualizamos el estado localmente para que la UI reaccione rápido
     setState(() {
       isFavorite = !isFavorite;
     });
-  }
 
-  void _showSnackBar(String message, Color color) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: color, duration: const Duration(seconds: 1)),
-    );
+    try {
+      if (isFavorite) {
+        // Agregamos con set y merge para que si el campo no existe, lo cree sin errores
+        await userRef.set({
+          'favoritos': FieldValue.arrayUnion([widget.docId])
+        }, SetOptions(merge: true));
+      } else {
+        await userRef.set({
+          'favoritos': FieldValue.arrayRemove([widget.docId])
+        }, SetOptions(merge: true));
+      }
+    } catch (e) {
+      // Si falla, revertimos el botón
+      setState(() {
+        isFavorite = !isFavorite;
+      });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al actualizar favoritos: $e')),
+      );
+    }
   }
 
   void _solicitarLibro(BuildContext context) async {
-    if (user == null) return;
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Error: Debes iniciar sesión.')));
+      return;
+    }
+
     final String? duenoId = widget.libro['usuarioId'];
-    if (duenoId == null || duenoId.isEmpty) return;
+
+    if (duenoId == null || duenoId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error: El libro no tiene un dueño asignado.'))
+      );
+      return;
+    }
 
     try {
       showDialog(
@@ -83,8 +116,8 @@ class _DetalleLibroScreenState extends State<DetalleLibroScreen> {
       await FirebaseFirestore.instance.collection('solicitudes').add({
         'libroId': widget.docId,
         'tituloLibro': widget.libro['titulo'] ?? 'Libro sin título',
-        'solicitanteId': user!.uid,
-        'duenoId': duenoId,
+        'solicitanteId': user.uid,     
+        'duenoId': duenoId,            
         'estadoSolicitud': 'PENDIENTE',
         'fecha': FieldValue.serverTimestamp(),
       });
@@ -93,23 +126,29 @@ class _DetalleLibroScreenState extends State<DetalleLibroScreen> {
         'estado': 'RESERVADO',
       });
 
-      if (!mounted) return;
-      Navigator.pop(context);
-      Navigator.pop(context);
+      if (!context.mounted) return;
+      Navigator.pop(context); 
+      Navigator.pop(context); 
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('¡Solicitud enviada con éxito!'), backgroundColor: Colors.green)
+        const SnackBar(
+          content: Text('¡Solicitud enviada con éxito!'), 
+          backgroundColor: Colors.green
+        )
       );
+
     } catch (e) {
-      if (!mounted) return;
+      if (!context.mounted) return;
       Navigator.pop(context);
-      _showSnackBar('Error al solicitar: $e', Colors.red);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al solicitar: $e'), backgroundColor: Colors.red)
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final String currentUserId = user?.uid ?? '';
+    final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
     final bool esMio = widget.libro['usuarioId'] == currentUserId;
     final bool disponible = widget.libro['estado'] == 'DISPONIBLE';
 
@@ -119,71 +158,52 @@ class _DetalleLibroScreenState extends State<DetalleLibroScreen> {
         backgroundColor: Colors.white,
         foregroundColor: Colors.orange[800],
         elevation: 1,
-      ),
-      // POSICIÓN ESTRATÉGICA: Botón flotante al lado del botón de acción principal
-      floatingActionButton: FloatingActionButton(
-        onPressed: _toggleFavorite,
-        backgroundColor: Colors.white,
-        elevation: 4,
-        child: Icon(
-          isFavorite ? Icons.favorite : Icons.favorite_border,
-          color: isFavorite ? Colors.red : Colors.grey,
-          size: 30,
-        ),
+        actions: [
+          // BOTÓN DE CORAZÓN MOVIDO AL APPBAR
+          IconButton(
+            icon: Icon(
+              isFavorite ? Icons.favorite : Icons.favorite_border,
+              color: isFavorite ? Colors.red : Colors.grey,
+            ),
+            onPressed: _toggleFavorite,
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ÁREA DE LA IMAGEN
-            Stack(
-              children: [
-                Center(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.network(
-                      widget.libro['fotoUrl'] ?? 'https://via.placeholder.com/150',
-                      height: 300,
-                      width: double.infinity,
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) => 
-                        const Icon(Icons.book, size: 100, color: Colors.grey),
-                    ),
-                  ),
+            Center(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  widget.libro['fotoUrl'] ?? 'https://via.placeholder.com/150',
+                  height: 250,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.book, size: 100, color: Colors.grey),
                 ),
-              ],
+              ),
             ),
             const SizedBox(height: 20),
             Text(
               widget.libro['titulo'] ?? 'Sin título',
-              style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
-            const Divider(height: 30),
+            const SizedBox(height: 10),
             _datoFila(Icons.person, 'Autor', widget.libro['autor']),
             _datoFila(Icons.school, 'Carrera', widget.libro['carrera']),
             _datoFila(Icons.menu_book, 'Materia', widget.libro['materia']),
             _datoFila(Icons.info_outline, 'Estado Físico', widget.libro['estadoFisico']?.toString().replaceAll('_', ' ').toUpperCase()),
-            const SizedBox(height: 25),
+            const SizedBox(height: 20),
             const Text('Descripción', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                widget.libro['descripcion'] ?? 'No hay descripción disponible.',
-                style: const TextStyle(fontSize: 16, height: 1.5),
-              ),
-            ),
-            const SizedBox(height: 80), // Espacio para que el botón flotante no tape el texto
+            Text(widget.libro['descripcion'] ?? 'No hay descripción disponible.', style: const TextStyle(fontSize: 16)),
           ],
         ),
       ),
       bottomNavigationBar: Container(
-        padding: const EdgeInsets.only(left: 20, right: 80, bottom: 20, top: 20), // Espacio extra a la derecha para el FAB
+        padding: const EdgeInsets.all(20),
         decoration: const BoxDecoration(
           color: Colors.white,
           border: Border(top: BorderSide(color: Colors.black12))
