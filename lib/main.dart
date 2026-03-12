@@ -8,6 +8,7 @@ import 'package:flutter_application_bookmet/screens/bienvenida_screen.dart';
 import 'package:flutter_application_bookmet/screens/registro_screen.dart'; 
 import 'package:flutter_application_bookmet/screens/login_screen.dart'; 
 import 'package:flutter_application_bookmet/screens/donacion_screen.dart';
+import 'package:flutter_application_bookmet/screens/admin_screen.dart';
 
 
 void main() async {
@@ -45,6 +46,7 @@ class MyApp extends StatelessWidget {
       '/usuario': (context) => const UsuarioScreen(), // pantalla de usuario logeado
       'catalogo': (context) => const CatalogoScreen(), 
       '/donar': (context) => const DonacionScreen(),
+      '/admin': (context) => const AdminScreen(),
       },
     );
   }

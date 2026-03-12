@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class BienvenidaScreen extends StatelessWidget {
   const BienvenidaScreen({super.key});
@@ -73,6 +74,10 @@ class BienvenidaScreen extends StatelessWidget {
 
   // --- Barra de Navegación ---
   Widget _buildNavBar(BuildContext context, User? user) {
+    //Detectando el ancho para saber si es un celular:
+    final double ancho = MediaQuery.of(context).size.width;
+    final bool esMovil = (ancho < 600);
+
     return Container(
       decoration: const BoxDecoration(
         image: DecorationImage(
@@ -80,53 +85,88 @@ class BienvenidaScreen extends StatelessWidget {
           fit: BoxFit.cover,
         )
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 40.0, vertical: 20.0),
+      //cambiado a padding dinámico dependiendo de si es un celular o no:
+      padding: EdgeInsets.only(left: esMovil? 10 : 25, right: esMovil? 5 : 15, top: 20, bottom: 20),
       child: Row(
         children:[
-          // Se eliminó el IconButton (hamburguesa) de la esquina superior izquierda
-          Icon(Icons.local_library_rounded, color: kPrimaryOrange, size: 40),
+          Icon(Icons.local_library_rounded, color: kPrimaryOrange, size: esMovil? 30 : 40),
           const SizedBox(width: 10),
-          Text('BOOKMET', style: TextStyle(color: kPrimaryOrange, fontSize: 22, fontWeight: FontWeight.bold)),
+          Text('BOOKMET', style: TextStyle(color: kPrimaryOrange, fontSize: esMovil? 16 : 22, fontWeight: FontWeight.bold)),
           
           const Spacer(), // Empuja los botones hacia la derecha
           // Se eliminó el botón "Inicio" de aquí
 
           // Botones si NO hay sesión
-          if (user == null) ...[
-            ElevatedButton(
-              onPressed: () => Navigator.pushNamed(context, '/login'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: kDarkBlue, // Mismo color (Azul oscuro)
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
-              ),
-              child: const Text('Iniciar sesión', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            ),
-            const SizedBox(width: 20),
-            ElevatedButton(
-              onPressed: () => Navigator.pushNamed(context, '/registro'),            
-              style: ElevatedButton.styleFrom(
-                backgroundColor: kDarkBlue, // Cambiado al mismo color que Iniciar Sesión
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
-              ),
-              child: const Text('Registrarse', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            )
-          ] 
-          // Botones si SÍ hay sesión
-          else ...[
-            ElevatedButton.icon(
-              onPressed: () => Navigator.pushReplacementNamed(context, '/usuario'),
-              icon: const Icon(Icons.dashboard, color: Colors.white),
-              label: const Text('Ir al Panel', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: kDarkBlue, // Unificado al azul oscuro
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18)
-              )
-            ),
-          ]
-        ],
-      ),
+          Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (user == null) ...[
+                  _wrapFlexible(
+                    esMovil: esMovil,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pushNamed(context, '/login'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: kDarkBlue, // Mismo color (Azul oscuro)
+                        padding: EdgeInsets.symmetric(horizontal: esMovil? 8 : 20, vertical: esMovil? 12 : 18),
+                      ),
+                      child: Text('Iniciar sesión', style: TextStyle(color: Colors.white, fontSize: esMovil? 12 : 14, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                    SizedBox(width: esMovil ? 8 : 20),
+                    _wrapFlexible(
+                      esMovil: esMovil,
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.pushNamed(context, '/registro'),            
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: kDarkBlue, // Cambiado al mismo color que Iniciar Sesión
+                          padding: EdgeInsets.symmetric(horizontal: esMovil? 8 : 24, vertical: esMovil? 12 : 18),
+                        ),
+                        child: Text('Registrarse', style: TextStyle(color: Colors.white, fontSize: esMovil? 12 : 14, fontWeight: FontWeight.bold)),
+                      )
+                  )
+                ] 
+                // Botones si SÍ hay sesión
+                else ...[
+                ElevatedButton.icon(
+                  onPressed: () => _redirigirAlPanel(context, user!.uid),
+                  icon: Icon(Icons.dashboard, color: Colors.white, size: esMovil? 18 : 24),
+                  label: Text('Ir al Panel', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: kDarkBlue, // Unificado al azul oscuro
+                    padding: EdgeInsets.symmetric(horizontal: esMovil? 12 : 24, vertical: 18)
+                  )
+                ),
+              ]
+              ],
+          )
+      ]),
     );
   }
+
+void _redirigirAlPanel(BuildContext context, String uid) async {
+  try {
+    // Consultamos el documento del usuario en la colección 'usuarios'
+    DocumentSnapshot userDoc = await FirebaseFirestore.instance
+        .collection('usuarios')
+        .doc(uid)
+        .get();
+    if (userDoc.exists) {
+      String rol = userDoc.get('rol') ?? 'USER';
+
+      if (rol == 'ADMINISTRADOR') {
+        Navigator.pushReplacementNamed(context, '/admin');
+      } else {
+        Navigator.pushReplacementNamed(context, '/usuario');
+      }
+    } else {
+      Navigator.pushReplacementNamed(context, '/usuario');
+    }
+  } catch (e) {
+      print("Error al verificar rol: $e");
+      Navigator.pushReplacementNamed(context, '/usuario');
+  }
+}
 
   Widget _buildMainContent(Size size) {
     return Padding(
@@ -154,6 +194,10 @@ class BienvenidaScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Widget _wrapFlexible({required bool esMovil, required Widget child}) {
+    return esMovil ? Flexible(fit: FlexFit.loose, child: child) : child;
   }
 
   Widget _buildFooterIllustration(Size size) {
