@@ -33,6 +33,7 @@ class _AdminScreenState extends State<AdminScreen> {
     if (!mounted) return;
     Navigator.pushReplacementNamed(context, '/login'); 
   }
+
   Future<void> _gestionarPublicacion(String publicacionId, String usuarioId, String nuevoEstado) async {
     try {
       final publicacionRef = FirebaseFirestore.instance.collection('publicaciones').doc(publicacionId);
@@ -132,7 +133,8 @@ class _AdminScreenState extends State<AdminScreen> {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('publicaciones')
-          .where('estado', isEqualTo: 'Pendiente')
+          // --- AQUÍ ESTÁ LA SOLUCIÓN: BUSCA AMBOS CASOS DE "PENDIENTE" ---
+          .where('estado', whereIn: ['PENDIENTE', 'Pendiente'])
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator(color: Colors.red));
