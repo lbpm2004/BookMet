@@ -20,7 +20,6 @@ class _UsuarioScreenState extends State<UsuarioScreen> {
   final User? user = FirebaseAuth.instance.currentUser;
   final AuthService _authService = AuthService();
   
-  // El índice 0 ahora será el Catálogo
   int _indiceSeleccionado = 0; 
 
   void _onItemTapped(int index) {
@@ -35,7 +34,6 @@ class _UsuarioScreenState extends State<UsuarioScreen> {
     Navigator.pushReplacementNamed(context, '/login'); 
   }
 
-  // Cuerpo dinámico: Índice 0: Catálogo, Índice 1: Publicar, Índice 2: Solicitudes
   Widget _obtenerCuerpoPantalla() {
     switch (_indiceSeleccionado) {
       case 0: return const CatalogoScreen(); 
@@ -48,7 +46,6 @@ class _UsuarioScreenState extends State<UsuarioScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // --- TU APPBAR ORIGINAL INTACATA ---
       appBar: AppBar(
         title: const Text('BookMet', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.white,
@@ -76,7 +73,6 @@ class _UsuarioScreenState extends State<UsuarioScreen> {
         ],
       ),
       
-      // --- TU MENÚ LATERAL (DRAWER) ORIGINAL INTACTO ---
       drawer: Drawer(
         child: user == null
             ? const Center(child: Text('No hay usuario activo'))
@@ -155,7 +151,6 @@ class _UsuarioScreenState extends State<UsuarioScreen> {
                         title: const Text('Intercambios y Solicitudes'),
                         onTap: () {
                           Navigator.pop(context);
-                          // En la nueva estructura, Solicitudes es el índice 2
                           setState(() => _indiceSeleccionado = 2);
                         },
                       ),
@@ -179,7 +174,6 @@ class _UsuarioScreenState extends State<UsuarioScreen> {
       
       body: _obtenerCuerpoPantalla(),
       
-      // --- BARRA INFERIOR MODIFICADA (Solo 3 botones) ---
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _indiceSeleccionado,
         onTap: _onItemTapped,

@@ -13,7 +13,6 @@ class RegistroScreen extends StatefulWidget {
 }
 
 class _RegistroScreenState extends State<RegistroScreen> {
-  // Controladores para leer lo que escribe el usuario
   final _nombreController = TextEditingController();
   final _apellidoController = TextEditingController(); 
   final _cedulaController = TextEditingController();
@@ -45,23 +44,21 @@ class _RegistroScreenState extends State<RegistroScreen> {
         await _authService.registrarUsuario(
           nombre: _nombreController.text.trim(),
           apellido: _apellidoController.text.trim(), 
-          cedula: _cedulaController.text.trim(), // Puede ir vacío sin problema
-          email: _correoController.text.trim().toLowerCase(), // Aseguramos que guarde en minúsculas
+          cedula: _cedulaController.text.trim(),
+          email: _correoController.text.trim().toLowerCase(),
           password: _passwordController.text.trim(),
-          fotoBytes: _imagenBytes, // <-- Pasamos los bytes crudos directamente
+          fotoBytes: _imagenBytes,
         );
 
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('¡Registro Exitoso! Ahora inicia sesión'), backgroundColor: Colors.green),
         );
-        // Usamos rutas nombradas para mantener la coherencia con el diagrama
         Navigator.pushReplacementNamed(context, '/login'); 
         
       } on FirebaseAuthException catch (e) {
         String mensajeError = 'Ocurrió un error al registrar el usuario.';
 
-        // Traducimos los códigos más comunes de Firebase al español
         if (e.code == 'email-already-in-use') {
           mensajeError = 'Este correo electrónico ya está registrado. Intenta iniciar sesión.';
         } else if (e.code == 'weak-password') {
@@ -71,7 +68,6 @@ class _RegistroScreenState extends State<RegistroScreen> {
         } else if (e.code == 'operation-not-allowed') {
           mensajeError = 'El registro por correo está deshabilitado en el sistema.';
         } else {
-          // Si es un error raro, mostramos el código para poder rastrearlo
           mensajeError = 'Error: ${e.code}'; 
         }
 
@@ -81,7 +77,6 @@ class _RegistroScreenState extends State<RegistroScreen> {
         );
         
       } catch (e) {
-        // Para cualquier otro error que no sea de Firebase (ej. no hay internet)
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Ocurrió un error inesperado en el sistema.'), backgroundColor: Colors.red),
@@ -94,7 +89,6 @@ class _RegistroScreenState extends State<RegistroScreen> {
     }
   }
 
-  // Función auxiliar para las casillas de texto
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
@@ -169,7 +163,6 @@ class _RegistroScreenState extends State<RegistroScreen> {
                     ),
                     const SizedBox(height: 30),
                     
-                    // --- FOTO DE PERFIL ---
                     GestureDetector(
                       onTap: _seleccionarFoto, 
                       child: CircleAvatar(
@@ -191,7 +184,6 @@ class _RegistroScreenState extends State<RegistroScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Nombre
                     _buildTextField(
                       controller: _nombreController,
                       label: 'Nombre',
@@ -200,7 +192,6 @@ class _RegistroScreenState extends State<RegistroScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Apellido
                     _buildTextField(
                       controller: _apellidoController,
                       label: 'Apellido',
@@ -209,7 +200,6 @@ class _RegistroScreenState extends State<RegistroScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Cédula o Carnet (OPCIONAL)
                     _buildTextField(
                       controller: _cedulaController,
                       label: 'Cédula (Opcional)',
@@ -219,7 +209,6 @@ class _RegistroScreenState extends State<RegistroScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Correo Unimet
                     _buildTextField(
                       controller: _correoController,
                       label: 'Correo Institucional',
@@ -232,18 +221,16 @@ class _RegistroScreenState extends State<RegistroScreen> {
                           return 'Por favor ingresa tu correo';
                         }
                         
-                        // 2. VALIDACIÓN ESTRICTA UNIMET (Requisito RF-01)
+                        // 2. VALIDACIÓN ESTRICTA UNIMET
                         String email = value.trim().toLowerCase();
                         if (!email.endsWith('@unimet.edu.ve') && !email.endsWith('@correo.unimet.edu.ve')) {
                           return 'Solo se permiten correos @correo.unimet.edu.ve o @unimet.edu.ve';
                         }
                         
-                        return null; // Si pasa las validaciones, está correcto
+                        return null;
                       },
                     ),
                     const SizedBox(height: 20),
-
-                    // Contraseña
                     _buildTextField(
                       controller: _passwordController,
                       label: 'Contraseña',
@@ -253,7 +240,6 @@ class _RegistroScreenState extends State<RegistroScreen> {
                     ),
                     const SizedBox(height: 35),
 
-                    // Botón Registro
                     _isLoading 
                       ? const Center(child: CircularProgressIndicator(color: Colors.orange))
                       : Container(

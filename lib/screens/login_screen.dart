@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // <-- NUEVO: Para leer el rol y estado
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/auth_service.dart';
 import '../widgets/fondo_con_blur.dart';
-import 'admin_screen.dart'; // <-- NUEVO: Importamos la pantalla del administrador
+import 'admin_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -27,8 +27,6 @@ class _LoginScreenState extends State<LoginScreen> {
           _correoController.text.trim(),
           _passwordController.text.trim(),
         );
-
-        // --- INICIO DE NUEVAS ACTUALIZACIONES (BANEOS Y ROLES) ---
         User? currentUser = FirebaseAuth.instance.currentUser;
         if (currentUser != null) {
           DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('usuarios').doc(currentUser.uid).get();
@@ -39,9 +37,8 @@ class _LoginScreenState extends State<LoginScreen> {
             String rol = userDoc.data().toString().contains('rol') ? userDoc.get('rol') : 'ESTUDIANTE';
             bool estaBaneado = userDoc.data().toString().contains('baneado') ? userDoc.get('baneado') : false;
 
-            // EL MURO DE SEGURIDAD 🚫
             if (estaBaneado) {
-              await FirebaseAuth.instance.signOut(); // Cerramos la sesión en la cara
+              await FirebaseAuth.instance.signOut(); 
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('ACCESO DENEGADO: Tu cuenta ha sido suspendida por la administración.'),
@@ -50,24 +47,20 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               );
               setState(() => _isLoading = false);
-              return; // Detiene la ejecución aquí, no entra a la app
+              return;
             }
 
-            // Mensaje de éxito original
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('¡Bienvenido de nuevo! 📚'), backgroundColor: Colors.green),
             );
 
-            // EL POLICÍA DE TRÁNSITO (RUTEO) 🚦
             if (rol == 'ADMINISTRADOR') {
-              // Si es Admin, vamos a la pantalla de Admin (borrando el historial de navegación)
               Navigator.pushAndRemoveUntil(
                 context, 
                 MaterialPageRoute(builder: (context) => const AdminScreen()), 
                 (Route<dynamic> route) => false
               );
             } else {
-              // Si es Estudiante, usamos tu ruta nombrada original
               Navigator.pushNamedAndRemoveUntil(
                 context, 
                 '/usuario', 
@@ -76,7 +69,6 @@ class _LoginScreenState extends State<LoginScreen> {
             }
           }
         }
-        // --- FIN DE NUEVAS ACTUALIZACIONES ---
         
       } on FirebaseAuthException catch (e) {
         String mensajeError = 'Ocurrió un error inesperado';
@@ -97,7 +89,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // Función auxiliar para que los campos queden igualitos a los del registro
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
@@ -218,13 +209,11 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                     const SizedBox(height: 20),
 
-                    // Botón Registro (Actualizado para usar rutas nombradas y color unificado)
                     TextButton(
                       onPressed: () => Navigator.pushNamed(context, '/registro'),
                       child: Text('¿No tienes cuenta? Regístrate aquí', style: TextStyle(color: Colors.grey[800], fontWeight: FontWeight.bold)),
                     ),
 
-                    // Botón Recuperación de contraseña (Actualizado color y lógica)
                     TextButton(
                        onPressed: () async {
                         final correo = _correoController.text.trim();
@@ -234,7 +223,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             return;
                         }
                         
-                        // Expresión regular para validar formato de correo básico
                         final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
                         if (!emailRegex.hasMatch(correo)) {
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -262,7 +250,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             const SnackBar(content: Text('Error inesperado al intentar recuperar la contraseña.'), backgroundColor: Colors.red));
                         }
                        },
-                       // AQUI ESTÁ EL CAMBIO DE COLOR:
                        child: Text('¿Olvidaste tu contraseña? Recupérala aquí', style: TextStyle(color: Colors.grey[800], fontWeight: FontWeight.bold))
                     ),
                   ],

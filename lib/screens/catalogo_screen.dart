@@ -10,7 +10,6 @@ class CatalogoScreen extends StatefulWidget {
 }
 
 class _CatalogoScreenState extends State<CatalogoScreen> {
-  // Filtros de estado
   String _filtroCarrera = 'Carreras (Todas)';
   String _filtroMateria = 'Materias (Todas)';
   String _filtroAlfa = 'Alfabético (-)'; 
@@ -28,7 +27,6 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
       backgroundColor: Colors.grey[100],
       body: Column(
         children: [
-          // BARRA DE BÚSQUEDA Y FILTROS (Mantenemos toda la interfaz)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             color: Colors.white,
@@ -82,10 +80,8 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
             ),
           ),
           
-          // GRILLA DE LIBROS
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              // IMPORTANTE: Solo traemos libros aprobados por el Admin (DISPONIBLE)
               stream: FirebaseFirestore.instance
                   .collection('publicaciones')
                   .where('estado', whereIn: ['DISPONIBLE', 'RESERVADO', 'PAUSADO']) 
@@ -98,7 +94,6 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
                   return const Center(child: Text('No hay libros disponibles en la biblioteca.'));
                 }
 
-                // Aplicar filtros de búsqueda, carrera y materia en memoria
                 var libros = snapshot.data!.docs.where((doc) {
                   var data = doc.data() as Map<String, dynamic>;
                   String titulo = (data['titulo'] ?? '').toString().toLowerCase();
@@ -190,7 +185,6 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
   }
 }
 
-// MANTENEMOS EL WIDGET DE HOVER COMPLETO PARA CALIDAD VISUAL
 class _HoverBookCard extends StatefulWidget {
   final Map<String, dynamic> libroData;
   final VoidCallback onTap;

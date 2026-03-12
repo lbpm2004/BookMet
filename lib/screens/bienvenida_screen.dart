@@ -5,36 +5,28 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class BienvenidaScreen extends StatelessWidget {
   const BienvenidaScreen({super.key});
 
-  // Definimos los colores del diseño
   final Color kPrimaryOrange = const Color(0xFFFF8200); 
   final Color kDarkBlue = const Color(0xFF003087);      
 
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    final User? user = FirebaseAuth.instance.currentUser; // Verificamos sesión
+    final User? user = FirebaseAuth.instance.currentUser;
 
     return Scaffold(
       backgroundColor: Colors.white, 
-      // Se eliminó el Drawer (menú desplegable) de aquí
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children:[
-            // 1. Barra de Navegación Superior
             _buildNavBar(context, user),
 
             const SizedBox(height: 60),
-
-            // 2. Contenido Principal (Texto Central)
             _buildMainContent(size),
 
             const SizedBox(height: 40),
-
-            // 3. Ilustración
             _buildFooterIllustration(size),
 
-            // 4. Misión y Visión (Acerca de)
             Transform.translate( 
               offset: const Offset(0, -1),
               child: Container(
@@ -72,7 +64,6 @@ class BienvenidaScreen extends StatelessWidget {
     );
   }
 
-  // --- Barra de Navegación ---
   Widget _buildNavBar(BuildContext context, User? user) {
     //Detectando el ancho para saber si es un celular:
     final double ancho = MediaQuery.of(context).size.width;
@@ -90,11 +81,11 @@ class BienvenidaScreen extends StatelessWidget {
       child: Row(
         children:[
           Icon(Icons.local_library_rounded, color: kPrimaryOrange, size: esMovil? 30 : 40),
+
           const SizedBox(width: 10),
           Text('BOOKMET', style: TextStyle(color: kPrimaryOrange, fontSize: esMovil? 16 : 22, fontWeight: FontWeight.bold)),
           
-          const Spacer(), // Empuja los botones hacia la derecha
-          // Se eliminó el botón "Inicio" de aquí
+          const Spacer(), 
 
           // Botones si NO hay sesión
           Row(
@@ -212,7 +203,6 @@ void _redirigirAlPanel(BuildContext context, String uid) async {
     );
   }
 
-  // --- Acerca De ---
   Widget _buildTextContent() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

@@ -57,7 +57,6 @@ class _DetalleLibroScreenState extends State<DetalleLibroScreen> {
     }
   }
 
-  // LÓGICA DE SOLICITUD CENTRALIZADA
   void _solicitarLibro(BuildContext context) async {
     if (user == null) return;
 
@@ -65,7 +64,7 @@ class _DetalleLibroScreenState extends State<DetalleLibroScreen> {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (ctx) => const Center(child: CircularProgressIndicator(color: Colors.red)),
+        builder: (ctx) => const Center(child: CircularProgressIndicator(color: Colors.orange)),
       );
 
       // 1. Enviar solicitud al Admin
@@ -74,7 +73,7 @@ class _DetalleLibroScreenState extends State<DetalleLibroScreen> {
         'tituloLibro': widget.libro['titulo'] ?? 'Libro sin título',
         'solicitanteId': user!.uid,
         'solicitanteEmail': user!.email,
-        'duenoId': widget.libro['usuarioId'], // Referencia de origen
+        'duenoId': widget.libro['usuarioId'],
         'estadoSolicitud': 'PENDIENTE',
         'fecha': FieldValue.serverTimestamp(),
       });
@@ -85,8 +84,8 @@ class _DetalleLibroScreenState extends State<DetalleLibroScreen> {
       });
 
       if (!mounted) return;
-      Navigator.pop(context); // Quitar carga
-      Navigator.pop(context); // Volver al catálogo
+      Navigator.pop(context);
+      Navigator.pop(context);
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('¡Solicitud enviada a la biblioteca! ✅'), backgroundColor: Colors.green)
@@ -108,7 +107,7 @@ class _DetalleLibroScreenState extends State<DetalleLibroScreen> {
       appBar: AppBar(
         title: const Text('Detalle del Libro', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.white,
-        foregroundColor: Colors.red[800], // Color de marca centralizado
+        foregroundColor: Colors.orange[800],
         elevation: 1,
       ),
       floatingActionButton: FloatingActionButton(
@@ -157,7 +156,7 @@ class _DetalleLibroScreenState extends State<DetalleLibroScreen> {
                 child: ElevatedButton(
                   onPressed: disponible ? () => _solicitarLibro(context) : null,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: disponible ? Colors.red[800] : Colors.grey,
+                    backgroundColor: disponible ? Colors.orange[800] : Colors.grey,
                     padding: const EdgeInsets.symmetric(vertical: 15),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))
                   ),
@@ -176,7 +175,7 @@ class _DetalleLibroScreenState extends State<DetalleLibroScreen> {
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
-          Icon(icono, size: 20, color: Colors.red[800]),
+          Icon(icono, size: 20, color: Colors.orange[800]),
           const SizedBox(width: 12),
           Text('$titulo: ', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
           Expanded(child: Text(valor?.toString() ?? 'N/A', style: const TextStyle(fontSize: 15))),

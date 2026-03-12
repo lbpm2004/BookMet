@@ -36,14 +36,14 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'BookMet',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(primaryColor: Colors.orange), // El naranja Unimet
-      initialRoute: '/', // La ruta inicial
+      theme: ThemeData(primaryColor: Colors.orange),
+      initialRoute: '/',
     routes: {
-      '/': (context) => const BienvenidaScreen(), // Define la pantalla de bienvenida
+      '/': (context) => const BienvenidaScreen(),
       
-      '/login': (context) => const LoginScreen(), // pantalla de login
-      '/registro': (context) => const RegistroScreen(), // pantalla de registro
-      '/usuario': (context) => const UsuarioScreen(), // pantalla de usuario logeado
+      '/login': (context) => const LoginScreen(),
+      '/registro': (context) => const RegistroScreen(),
+      '/usuario': (context) => const UsuarioScreen(),
       'catalogo': (context) => const CatalogoScreen(), 
       '/donar': (context) => const DonacionScreen(),
       '/admin': (context) => const AdminScreen(),
