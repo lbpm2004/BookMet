@@ -188,7 +188,11 @@ class _RegistroScreenState extends State<RegistroScreen> {
                       controller: _nombreController,
                       label: 'Nombre',
                       icon: Icons.person_outline,
-                      validator: (value) => value!.isEmpty ? 'Ingresa tu nombre' : null,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) return 'Ingresa tu nombre';
+                        if (RegExp(r'[0-9]').hasMatch(value)) return 'El nombre no puede contener números';
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 20),
 
@@ -196,7 +200,11 @@ class _RegistroScreenState extends State<RegistroScreen> {
                       controller: _apellidoController,
                       label: 'Apellido',
                       icon: Icons.person_outline,
-                      validator: (value) => value!.isEmpty ? 'Ingresa tu apellido' : null,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) return 'Ingresa tu apellido';
+                        if (RegExp(r'[0-9]').hasMatch(value)) return 'El apellido no puede contener números';
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 20),
 
@@ -205,7 +213,19 @@ class _RegistroScreenState extends State<RegistroScreen> {
                       label: 'Cédula (Opcional)',
                       icon: Icons.badge_outlined,
                       type: TextInputType.number,
-                      validator: (value) => null, 
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) return null; // Es opcional
+                        // Verificamos que solo contenga números
+                        if (!RegExp(r'^[0-9]+$').hasMatch(value)) {
+                          return 'La cédula solo debe contener números';
+                        }
+                        // Verificamos el rango
+                        final int? cedula = int.tryParse(value);
+                        if (cedula == null || cedula < 1000000 || cedula > 99999999) {
+                          return 'La cédula debe estar entre 1.000.000 y 99.999.999';
+                        }
+                        return null;
+                      }, 
                     ),
                     const SizedBox(height: 20),
 
@@ -216,12 +236,10 @@ class _RegistroScreenState extends State<RegistroScreen> {
                       icon: Icons.email_outlined,
                       type: TextInputType.emailAddress,
                       validator: (value) {
-                        // 1. Verificamos que no esté vacío
                         if (value == null || value.trim().isEmpty) {
                           return 'Por favor ingresa tu correo';
                         }
                         
-                        // 2. VALIDACIÓN ESTRICTA UNIMET
                         String email = value.trim().toLowerCase();
                         if (!email.endsWith('@unimet.edu.ve') && !email.endsWith('@correo.unimet.edu.ve')) {
                           return 'Solo se permiten correos @correo.unimet.edu.ve o @unimet.edu.ve';
@@ -233,10 +251,14 @@ class _RegistroScreenState extends State<RegistroScreen> {
                     const SizedBox(height: 20),
                     _buildTextField(
                       controller: _passwordController,
-                      label: 'Contraseña',
+                      label: 'Contraseña (mín. 6 caracteres)',
                       icon: Icons.lock_outline,
                       obscure: true,
-                      validator: (value) => value!.length < 6 ? 'Mínimo 6 caracteres' : null,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) return 'Ingresa una contraseña';
+                        if (value.length < 6) return 'La contraseña debe tener al menos 6 caracteres';
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 35),
 
@@ -261,7 +283,6 @@ class _RegistroScreenState extends State<RegistroScreen> {
                         ),
                     const SizedBox(height: 20),
 
-                    // Botón de regreso al Login (por si el usuario ya tiene cuenta)
                     TextButton(
                       onPressed: () => Navigator.pushReplacementNamed(context, '/login'),
                       child: Text('¿Ya tienes cuenta? Inicia sesión aquí', style: TextStyle(color: Colors.grey[800], fontWeight: FontWeight.bold)),
