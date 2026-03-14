@@ -8,6 +8,7 @@ import 'mis_solicitudes_screen.dart';
 import 'publicar_screen.dart';
 import 'lista_deseos_screen.dart';
 import 'mis_publicaciones_screen.dart';
+import 'perfil_screen.dart'; // NUEVO: Importamos la pantalla de perfil
 
 class AdminScreen extends StatefulWidget {
   const AdminScreen({super.key});
@@ -88,21 +89,17 @@ class _AdminScreenState extends State<AdminScreen> {
     }
   }
 
-  // NUEVO: Función para recibir el libro de vuelta en la biblioteca
   Future<void> _marcarComoDevuelto(String solicitudId, String libroId, String solicitanteId) async {
     try {
-      // 1. Cambiamos el estado de la solicitud a DEVUELTO y guardamos la fecha
       await FirebaseFirestore.instance.collection('solicitudes').doc(solicitudId).update({
         'estadoSolicitud': 'DEVUELTO',
         'fechaDevolucion': FieldValue.serverTimestamp(),
       });
 
-      // 2. Liberamos el libro en la colección de publicaciones
       await FirebaseFirestore.instance.collection('publicaciones').doc(libroId).update({
         'estado': 'DISPONIBLE',
       });
 
-      // 3. Opcional: Sumamos un punto al historial del usuario por devolverlo (puedes omitir esto si no tienes ese campo)
       if (solicitanteId.isNotEmpty) {
         await FirebaseFirestore.instance.collection('usuarios').doc(solicitanteId).update({
           'librosDevueltos': FieldValue.increment(1),
@@ -206,7 +203,6 @@ class _AdminScreenState extends State<AdminScreen> {
                 leading: const Icon(Icons.person_search, color: Colors.red),
                 title: Text(sol['tituloLibro'] ?? 'Libro pedido'),
                 subtitle: Text('Estado: $estado'),
-                // NUEVO: Modificamos el trailing para mostrar el botón de devolución si está ACEPTADO
                 trailing: estado == 'PENDIENTE' 
                   ? Row(
                       mainAxisSize: MainAxisSize.min,
@@ -337,20 +333,28 @@ class _AdminScreenState extends State<AdminScreen> {
                   title: const Text('Mis Publicaciones'), 
                   onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const MisPublicacionesScreen()))
                 ),
-                // --- NUEVO BOTÓN DE DONACIÓN EN EL MENÚ DESPLEGABLE ---
                 ListTile(
                   leading: const Icon(Icons.volunteer_activism, color: Colors.green), 
                   title: const Text('Donar a Biblioteca'), 
                   onTap: () {
-                    Navigator.pop(context); // Esto es importante para cerrar el menú lateral antes de navegar
+                    Navigator.pop(context); 
                     Navigator.pushNamed(context, '/donar');
                   }
                 ),
-                // -------------------------------------------------------
                 const Divider(),
+                // NUEVO: Botón de Gestionar Usuario añadido en el Admin Screen
+                ListTile(
+                  leading: const Icon(Icons.manage_accounts, color: Colors.red),
+                  title: const Text('Gestionar Usuario'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => const PerfilScreen()));
+                  },
+                ),
+                const SizedBox(height: 20),
                 ListTile(
                   leading: const Icon(Icons.logout, color: Colors.red), 
-                  title: const Text('Cerrar Sesión'), 
+                  title: const Text('Cerrar Sesión', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)), 
                   onTap: _cerrarSesion
                 ),
               ],

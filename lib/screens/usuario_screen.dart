@@ -107,24 +107,13 @@ class _UsuarioScreenState extends State<UsuarioScreen> {
                           ],
                         ),
                         accountEmail: Text(email),
-                        currentAccountPicture: Material(
-                          color: Colors.transparent, 
-                          child: InkWell(
-                            customBorder: const CircleBorder(), 
-                            splashColor: Colors.white.withOpacity(0.5), 
-                            highlightColor: Colors.orange.withOpacity(0.3), 
-                            onTap: () {
-                              Navigator.pop(context); 
-                              Navigator.push(context, MaterialPageRoute(builder: (context) => const PerfilScreen()));
-                            },
-                            child: Container(
-                              decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2)),
-                              child: CircleAvatar(
-                                backgroundColor: Colors.white,
-                                backgroundImage: fotoUrl.isNotEmpty ? NetworkImage(fotoUrl) : null,
-                                child: fotoUrl.isEmpty ? Icon(Icons.person, size: 40, color: Colors.orange[300]) : null,
-                              ),
-                            ),
+                        // MODIFICACIÓN: Se eliminó el Material e InkWell para quitar el clic
+                        currentAccountPicture: Container(
+                          decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2)),
+                          child: CircleAvatar(
+                            backgroundColor: Colors.white,
+                            backgroundImage: fotoUrl.isNotEmpty ? NetworkImage(fotoUrl) : null,
+                            child: fotoUrl.isEmpty ? Icon(Icons.person, size: 40, color: Colors.orange[300]) : null,
                           ),
                         ),
                       ),
@@ -155,10 +144,14 @@ class _UsuarioScreenState extends State<UsuarioScreen> {
                         },
                       ),
                       const Divider(),
+                      // MODIFICACIÓN: Botón de Configuración ahora es Gestionar Usuario
                       ListTile(
-                        leading: const Icon(Icons.settings, color: Colors.grey),
-                        title: const Text('Configuración'),
-                        onTap: () => Navigator.pop(context),
+                        leading: const Icon(Icons.manage_accounts, color: Colors.orange),
+                        title: const Text('Gestionar Usuario'),
+                        onTap: () {
+                          Navigator.pop(context); // Cierra el menú lateral
+                          Navigator.push(context, MaterialPageRoute(builder: (context) => const PerfilScreen()));
+                        },
                       ),
                       const SizedBox(height: 20),
                       ListTile(
