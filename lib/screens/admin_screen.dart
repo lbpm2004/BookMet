@@ -88,6 +88,36 @@ class _AdminScreenState extends State<AdminScreen> {
     }
   }
 
+  // NUEVO: Función para recibir el libro de vuelta en la biblioteca
+  Future<void> _marcarComoDevuelto(String solicitudId, String libroId, String solicitanteId) async {
+    try {
+      // 1. Cambiamos el estado de la solicitud a DEVUELTO y guardamos la fecha
+      await FirebaseFirestore.instance.collection('solicitudes').doc(solicitudId).update({
+        'estadoSolicitud': 'DEVUELTO',
+        'fechaDevolucion': FieldValue.serverTimestamp(),
+      });
+
+      // 2. Liberamos el libro en la colección de publicaciones
+      await FirebaseFirestore.instance.collection('publicaciones').doc(libroId).update({
+        'estado': 'DISPONIBLE',
+      });
+
+      // 3. Opcional: Sumamos un punto al historial del usuario por devolverlo (puedes omitir esto si no tienes ese campo)
+      if (solicitanteId.isNotEmpty) {
+        await FirebaseFirestore.instance.collection('usuarios').doc(solicitanteId).update({
+          'librosDevueltos': FieldValue.increment(1),
+        });
+      }
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Libro recibido en biblioteca 📚✅'), backgroundColor: Colors.blue),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al devolver: $e'), backgroundColor: Colors.red));
+    }
+  }
+
   Widget _construirVistaInicio() {
     return Center(
       child: Column(
@@ -133,7 +163,6 @@ class _AdminScreenState extends State<AdminScreen> {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('publicaciones')
-          // --- AQUÍ ESTÁ LA SOLUCIÓN: BUSCA AMBOS CASOS DE "PENDIENTE" ---
           .where('estado', whereIn: ['PENDIENTE', 'Pendiente'])
           .snapshots(),
       builder: (context, snapshot) {
@@ -177,6 +206,7 @@ class _AdminScreenState extends State<AdminScreen> {
                 leading: const Icon(Icons.person_search, color: Colors.red),
                 title: Text(sol['tituloLibro'] ?? 'Libro pedido'),
                 subtitle: Text('Estado: $estado'),
+                // NUEVO: Modificamos el trailing para mostrar el botón de devolución si está ACEPTADO
                 trailing: estado == 'PENDIENTE' 
                   ? Row(
                       mainAxisSize: MainAxisSize.min,
@@ -185,7 +215,18 @@ class _AdminScreenState extends State<AdminScreen> {
                         IconButton(icon: const Icon(Icons.cancel, color: Colors.red), onPressed: () => _procesarSolicitudPrestamo(doc.id, sol['libroId'], 'RECHAZADO')),
                       ],
                     )
-                  : Icon(estado == 'ACEPTADO' ? Icons.check : Icons.close, color: Colors.grey),
+                  : estado == 'ACEPTADO'
+                      ? ElevatedButton.icon(
+                          icon: const Icon(Icons.assignment_return, size: 16),
+                          label: const Text('Recibir', style: TextStyle(fontSize: 12)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                          ),
+                          onPressed: () => _marcarComoDevuelto(doc.id, sol['libroId'], sol['solicitanteId'] ?? ''),
+                        )
+                      : Icon(estado == 'DEVUELTO' ? Icons.library_add_check : Icons.close, color: Colors.grey),
               ),
             );
           },
@@ -228,14 +269,10 @@ class _AdminScreenState extends State<AdminScreen> {
                 children: [
                   Text(libro['titulo'] ?? 'Sin título', style: const TextStyle(fontWeight: FontWeight.bold)),
                   Text(libro['autor'] ?? 'Autor desconocido', style: const TextStyle(fontSize: 12)),
-                  
-                  // NUEVO: Añadidos los detalles del estado para facilitar la moderación del Admin
                   const SizedBox(height: 4),
                   Text('Estado: ${libro['estadoFisico']?.toString().toUpperCase() ?? 'NO ESPECIFICADO'}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
                   if (libro['detallesFisicos'] != null && libro['detallesFisicos'].toString().trim().isNotEmpty)
                     Text('Detalles: ${libro['detallesFisicos']}', style: const TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Colors.black54)),
-                  // --------------------------------------------------------------------------------
-
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [

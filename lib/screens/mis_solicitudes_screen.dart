@@ -21,7 +21,7 @@ class _MisSolicitudesScreenState extends State<MisSolicitudesScreen> {
     });
 
     // Si se cancela o rechaza, el libro vuelve a estar 'DISPONIBLE' en el catálogo
-    if (nuevoEstado == 'CANCELADA' || nuevoEstado == 'RECHAZADA') {
+    if (nuevoEstado == 'CANCELADO' || nuevoEstado == 'CANCELADA' || nuevoEstado == 'RECHAZADO' || nuevoEstado == 'RECHAZADA') {
       await FirebaseFirestore.instance.collection('publicaciones').doc(libroId).update({
         'estado': 'DISPONIBLE',
       });
@@ -81,23 +81,28 @@ class _MisSolicitudesScreenState extends State<MisSolicitudesScreen> {
                 var enCurso = todasLasSolicitudes.where((doc) {
                   var data = doc.data() as Map<String, dynamic>;
                   String estado = data['estadoSolicitud'] ?? '';
-                  return estado == 'PENDIENTE' || estado == 'ACEPTADA';
+                  // Aceptamos ambas terminaciones para evitar bugs con datos viejos
+                  return estado == 'PENDIENTE' || estado == 'ACEPTADA' || estado == 'ACEPTADO';
                 }).toList();
 
                 // 2. Filtro dinámico para "Finalizadas"
-                  var finalizadas = todasLasSolicitudes.where((doc) {
+                var finalizadas = todasLasSolicitudes.where((doc) {
                   var data = doc.data() as Map<String, dynamic>;
-                    String estado = data['estadoSolicitud'] ?? '';
-  
-                    bool esFinalizada = estado == 'DEVUELTA' || estado == 'CANCELADA' || estado == 'RECHAZADA';
-                    if (!esFinalizada) return false;
+                  String estado = data['estadoSolicitud'] ?? '';
 
-                    if (_filtroFinalizadas == 'Devueltas' && estado != 'DEVUELTA') return false;
-                    if (_filtroFinalizadas == 'Canceladas' && estado != 'CANCELADA') return false;
-                    if (_filtroFinalizadas == 'Rechazadas' && estado != 'RECHAZADA') return false;
+                  bool esDevuelto = estado == 'DEVUELTA' || estado == 'DEVUELTO';
+                  bool esCancelado = estado == 'CANCELADA' || estado == 'CANCELADO';
+                  bool esRechazado = estado == 'RECHAZADA' || estado == 'RECHAZADO';
 
-                    return true;
-                  }).toList();
+                  bool esFinalizada = esDevuelto || esCancelado || esRechazado;
+                  if (!esFinalizada) return false;
+
+                  if (_filtroFinalizadas == 'Devueltas' && !esDevuelto) return false;
+                  if (_filtroFinalizadas == 'Canceladas' && !esCancelado) return false;
+                  if (_filtroFinalizadas == 'Rechazadas' && !esRechazado) return false;
+
+                  return true;
+                }).toList();
 
                 return TabBarView(
                   children: [
@@ -186,7 +191,7 @@ class _MisSolicitudesScreenState extends State<MisSolicitudesScreen> {
           tituloLibro: tituloLibro,
           estado: estado,
           data: data,
-          onCancelar: () => _cambiarEstadoSolicitud(solId, 'CANCELADA', libroId),
+          onCancelar: () => _cambiarEstadoSolicitud(solId, 'CANCELADO', libroId), // Actualizado a masculino
         );
       },
     );
@@ -220,10 +225,14 @@ class _HoverSolicitudCardState extends State<_HoverSolicitudCard> {
   Widget _buildBadgeEstado(String estado) {
     Color color;
     switch (estado) {
-      case 'ACEPTADA': color = Colors.green; break;
-      case 'RECHAZADA': color = Colors.red; break;
-      case 'CANCELADA': color = Colors.grey; break;
-      case 'DEVUELTA': color = Colors.blue; break;
+      case 'ACEPTADA':
+      case 'ACEPTADO': color = Colors.green; break;
+      case 'RECHAZADA':
+      case 'RECHAZADO': color = Colors.red; break;
+      case 'CANCELADA':
+      case 'CANCELADO': color = Colors.grey; break;
+      case 'DEVUELTA':
+      case 'DEVUELTO': color = Colors.blue; break;
       default: color = Colors.orange;
     }
     return Container(
@@ -335,14 +344,15 @@ class _HoverSolicitudCardState extends State<_HoverSolicitudCard> {
                       ],
                     ),
 
-                  if (widget.estado == 'ACEPTADA')
+                  if (widget.estado == 'ACEPTADA' || widget.estado == 'ACEPTADO')
                     const Padding(
                       padding: EdgeInsets.only(top: 8),
-                      child: Text('✅ Aprobado. Pasa a retirar tu libro por la biblioteca.', 
+                      // Modifiqué el texto para recordarle que debe devolverlo
+                      child: Text('✅ Aprobado. Recuerda devolver el libro al administrador al terminar de usarlo.', 
                         style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 12)),
                     ),
                   
-                  if (widget.estado == 'RECHAZADA')
+                  if (widget.estado == 'RECHAZADA' || widget.estado == 'RECHAZADO')
                     const Padding(
                       padding: EdgeInsets.only(top: 8),
                       child: Text('❌ La biblioteca no pudo procesar esta solicitud.', 
@@ -356,14 +366,14 @@ class _HoverSolicitudCardState extends State<_HoverSolicitudCard> {
                         style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 12)),
                     ),
 
-                  if (widget.estado == 'DEVUELTA')
+                  if (widget.estado == 'DEVUELTA' || widget.estado == 'DEVUELTO')
                     const Padding(
                       padding: EdgeInsets.only(top: 8),
-                      child: Text('📚 Devuelto correctamente. ¡Gracias por leer!', 
+                      child: Text('📚 Devuelto correctamente a la biblioteca. ¡Gracias por leer!', 
                         style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 12)),
                     ),
 
-                  if (widget.estado == 'CANCELADA')
+                  if (widget.estado == 'CANCELADA' || widget.estado == 'CANCELADO')
                     const Padding(
                       padding: EdgeInsets.only(top: 8),
                       child: Text('🚫 Cancelaste esta reserva.', 
