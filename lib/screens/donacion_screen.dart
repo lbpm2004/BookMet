@@ -118,15 +118,36 @@ class _DonacionScreenState extends State<DonacionScreen> {
             const SizedBox(height: 20),
             TextFormField(
               controller: _referenciaController,
-              decoration: const InputDecoration(labelText: 'Número de Referencia', prefixIcon: Icon(Icons.numbers)),
-              validator: (v) => v!.isEmpty ? 'Ingresa la referencia': null,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Número de Referencia (últimos 4 dígitos)', 
+                prefixIcon: Icon(Icons.numbers)
+              ),
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) return 'Ingresa la referencia';
+                if (v.trim().length != 4) return 'Debe tener exactamente 4 dígitos';
+                if (!RegExp(r'^[0-9]+$').hasMatch(v.trim())) return 'Solo se permiten números enteros';
+                return null;
+              },
             ),
             const SizedBox(height: 15),
             TextFormField(
               controller: _montoController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Monto Donado', prefixIcon: Icon(Icons.attach_money)),
-              validator: (v) => v!.isEmpty ? 'Ingresa el monto' : null
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(
+                labelText: 'Monto Donado (decimales separados con punto y no coma)', 
+                prefixIcon: Icon(Icons.attach_money)
+              ),
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) return 'Ingresa el monto';
+                if (v.contains(',')) return 'Usa un punto en lugar de coma para los decimales';
+                
+                final monto = double.tryParse(v.trim());
+                if (monto == null) return 'Ingresa un monto numérico válido';
+                if (monto <= 0) return 'El monto debe ser mayor a 0'; // <-- Nueva validación
+                
+                return null;
+              }
             ),
             const SizedBox(height: 30),
             _isSaving
