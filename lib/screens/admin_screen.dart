@@ -290,10 +290,32 @@ class _AdminScreenState extends State<AdminScreen> {
                   accountEmail: Text(user?.email ?? ''),
                   currentAccountPicture: const CircleAvatar(backgroundColor: Colors.white, child: Icon(Icons.admin_panel_settings, color: Colors.red)),
                 ),
-                ListTile(leading: const Icon(Icons.favorite, color: Colors.redAccent), title: const Text('Mi Lista de Deseos'), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const ListaDeseosScreen()))),
-                ListTile(leading: const Icon(Icons.book, color: Colors.orange), title: const Text('Mis Publicaciones'), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const MisPublicacionesScreen()))),
+                ListTile(
+                  leading: const Icon(Icons.favorite, color: Colors.redAccent), 
+                  title: const Text('Mi Lista de Deseos'), 
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const ListaDeseosScreen()))
+                ),
+                ListTile(
+                  leading: const Icon(Icons.book, color: Colors.orange), 
+                  title: const Text('Mis Publicaciones'), 
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const MisPublicacionesScreen()))
+                ),
+                // --- NUEVO BOTÓN DE DONACIÓN EN EL MENÚ DESPLEGABLE ---
+                ListTile(
+                  leading: const Icon(Icons.volunteer_activism, color: Colors.green), 
+                  title: const Text('Donar a Biblioteca'), 
+                  onTap: () {
+                    Navigator.pop(context); // Esto es importante para cerrar el menú lateral antes de navegar
+                    Navigator.pushNamed(context, '/donar');
+                  }
+                ),
+                // -------------------------------------------------------
                 const Divider(),
-                ListTile(leading: const Icon(Icons.logout, color: Colors.red), title: const Text('Cerrar Sesión'), onTap: _cerrarSesion),
+                ListTile(
+                  leading: const Icon(Icons.logout, color: Colors.red), 
+                  title: const Text('Cerrar Sesión'), 
+                  onTap: _cerrarSesion
+                ),
               ],
             );
           },
