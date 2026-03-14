@@ -19,6 +19,7 @@ class _PublicarScreenState extends State<PublicarScreen> {
   final _nombreController = TextEditingController();
   final _autoresController = TextEditingController();
   final _descripcionController = TextEditingController();
+  final _detallesFisicosController = TextEditingController(); // NUEVO CONTROLADOR
   
   String? _carreraSeleccionada;
   String? _materiaSeleccionada;
@@ -51,6 +52,7 @@ class _PublicarScreenState extends State<PublicarScreen> {
       _nombreController.text = widget.libroAEditar!['titulo'] ?? '';
       _autoresController.text = widget.libroAEditar!['autor'] ?? '';
       _descripcionController.text = widget.libroAEditar!['descripcion'] ?? '';
+      _detallesFisicosController.text = widget.libroAEditar!['detallesFisicos'] ?? ''; // CARGAR DATO SI EXISTE
       
       String materiaGuardada = widget.libroAEditar!['materia'] ?? '';
       if (_materias.contains(materiaGuardada)) {
@@ -74,6 +76,7 @@ class _PublicarScreenState extends State<PublicarScreen> {
     _nombreController.dispose();
     _autoresController.dispose();
     _descripcionController.dispose();
+    _detallesFisicosController.dispose(); // LIMPIAR NUEVO CONTROLADOR
     super.dispose();
   }
 
@@ -142,6 +145,7 @@ class _PublicarScreenState extends State<PublicarScreen> {
         'carrera': _carreraSeleccionada,
         'estadoFisico': _estadoSeleccionado,
         'descripcion': _descripcionController.text.trim(),
+        'detallesFisicos': _detallesFisicosController.text.trim(), // GUARDAR NUEVO CAMPO
         'fotoUrl': portadaUrl,
         'contraportadaUrl': contraportadaUrl,
         'usuarioId': user.uid,
@@ -170,6 +174,7 @@ class _PublicarScreenState extends State<PublicarScreen> {
       _nombreController.clear();
       _autoresController.clear();
       _descripcionController.clear();
+      _detallesFisicosController.clear(); // VACIAR CAMPO AL ENVIAR
       setState(() {
         _carreraSeleccionada = null;
         _materiaSeleccionada = null;
@@ -311,10 +316,12 @@ class _PublicarScreenState extends State<PublicarScreen> {
                 validator: (v) => v == null ? 'Selecciona el estado' : null,
               ),
               const SizedBox(height: 12),
+              
+              // CAMPO 1: Detalles Físicos (Mantiene validación original)
               TextFormField(
-                controller: _descripcionController,
-                maxLines: 3,
-                decoration: const InputDecoration(labelText: 'Descripción', border: OutlineInputBorder()),
+                controller: _detallesFisicosController,
+                maxLines: 2,
+                decoration: const InputDecoration(labelText: 'Detalles de la condición física', border: OutlineInputBorder()),
                 validator: (value) {
                   if (_estadoSeleccionado == 'deteriorado' && (value == null || value.trim().isEmpty)) {
                     return 'Por favor, describe el deterioro del libro.';
@@ -322,6 +329,15 @@ class _PublicarScreenState extends State<PublicarScreen> {
                   return null;
                 },
               ),
+              const SizedBox(height: 12),
+
+              // CAMPO 2: Descripción general (Opcional, sin validación)
+              TextFormField(
+                controller: _descripcionController,
+                maxLines: 3,
+                decoration: const InputDecoration(labelText: 'Descripción general del libro (Opcional)', border: OutlineInputBorder()),
+              ),
+              
               const SizedBox(height: 24),
               _isLoading
                   ? Center(child: CircularProgressIndicator(color: Colors.red[800]))

@@ -120,7 +120,7 @@ class BienvenidaScreen extends StatelessWidget {
                 // Botones si SÍ hay sesión
                 else ...[
                 ElevatedButton.icon(
-                  onPressed: () => _redirigirAlPanel(context, user!.uid),
+                  onPressed: () => _redirigirAlPanel(context, user.uid),
                   icon: Icon(Icons.dashboard, color: Colors.white, size: esMovil? 18 : 24),
                   label: Text('Ir al Panel', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                   style: ElevatedButton.styleFrom(

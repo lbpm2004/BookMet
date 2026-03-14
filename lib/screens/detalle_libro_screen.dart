@@ -103,6 +103,10 @@ class _DetalleLibroScreenState extends State<DetalleLibroScreen> {
     final bool esMio = widget.libro['usuarioId'] == currentUserId;
     final bool disponible = widget.libro['estado'] == 'DISPONIBLE';
 
+    // NUEVO: Verificamos si hay detalles físicos guardados
+    final bool tieneDetallesFisicos = widget.libro['detallesFisicos'] != null && 
+                                      widget.libro['detallesFisicos'].toString().trim().isNotEmpty;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Detalle del Libro', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -139,9 +143,28 @@ class _DetalleLibroScreenState extends State<DetalleLibroScreen> {
             _datoFila(Icons.menu_book, 'Materia', widget.libro['materia']),
             _datoFila(Icons.info_outline, 'Estado Físico', widget.libro['estadoFisico']?.toString().toUpperCase()),
             const SizedBox(height: 20),
+            
+            // Sección de Descripción General
             const Text('Descripción', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            Text(widget.libro['descripcion'] ?? 'No hay descripción.', style: const TextStyle(fontSize: 16)),
+            Text(
+              widget.libro['descripcion'] != null && widget.libro['descripcion'].toString().trim().isNotEmpty 
+                  ? widget.libro['descripcion'] 
+                  : 'No hay descripción general.', 
+              style: const TextStyle(fontSize: 16)
+            ),
+            
+            // NUEVO: Sección de Detalles del Estado Físico (Solo se muestra si existe)
+            if (tieneDetallesFisicos) ...[
+              const SizedBox(height: 16),
+              const Text('Detalles de la condición:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
+              const SizedBox(height: 4),
+              Text(
+                widget.libro['detallesFisicos'],
+                style: const TextStyle(fontSize: 15, fontStyle: FontStyle.italic, color: Colors.black87),
+              ),
+            ],
+
             const SizedBox(height: 80), 
           ],
         ),

@@ -228,6 +228,14 @@ class _AdminScreenState extends State<AdminScreen> {
                 children: [
                   Text(libro['titulo'] ?? 'Sin título', style: const TextStyle(fontWeight: FontWeight.bold)),
                   Text(libro['autor'] ?? 'Autor desconocido', style: const TextStyle(fontSize: 12)),
+                  
+                  // NUEVO: Añadidos los detalles del estado para facilitar la moderación del Admin
+                  const SizedBox(height: 4),
+                  Text('Estado: ${libro['estadoFisico']?.toString().toUpperCase() ?? 'NO ESPECIFICADO'}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+                  if (libro['detallesFisicos'] != null && libro['detallesFisicos'].toString().trim().isNotEmpty)
+                    Text('Detalles: ${libro['detallesFisicos']}', style: const TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Colors.black54)),
+                  // --------------------------------------------------------------------------------
+
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
