@@ -16,8 +16,10 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
   String _filtroTiempo = 'Más Recientes';
   String _busqueda = ''; 
 
-  final List<String> _carreras = ['Carreras (Todas)', 'Ingenieria', 'Psicologia', 'Derecho', 'Administracion'];
-  final List<String> _materias = ['Materias (Todas)', 'Matemáticas 1', 'Matemáticas 2', 'Matemáticas 5', 'Física'];
+  // SOLUCIÓN AL ERROR CRÍTICO: Se añadieron 'Carreras (Todas)' y 'Materias (Todas)' a las listas
+  final List<String> _carreras = ['Carreras (Todas)', 'Ingenieria', 'Psicologia', 'Derecho', 'Administracion', 'Economía', 'Educación'];
+  final List<String> _materias = ['Materias (Todas)', 'Matemáticas 1', 'Matemáticas 2', 'Matemáticas 3', 'Matemáticas 4', 'Matemáticas 5', 'Física 1', 'Física 2', 'Introducción a la Psicología', 'Psicología Cognitiva', 'Psicometría', 'Introducción a Derecho', 'Lógica y Argumentación', 'Derechos Humanos','Principios de Economía', 'Contabilidad 1', 'Finanzas 1','Introducción a las Ciencias Administrativas', 'Estadística 1', 'Gestión del Capital Humano'];
+
   final List<String> _opcionesAlfa = ['Alfabético (-)', 'A-Z', 'Z-A'];
   final List<String> _opcionesTiempo = ['Más Recientes', 'Más Antiguos'];
 
@@ -90,8 +92,18 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return Center(child: CircularProgressIndicator(color: Colors.red[800]));
                 }
+                
+                // Validación original de la profesora (cuando la base de datos está totalmente vacía)
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const Center(child: Text('No hay libros disponibles en la biblioteca.'));
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(20.0),
+                      child: Text('No hay libros con esas características en estos momentos', 
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)
+                      ),
+                    )
+                  );
                 }
 
                 var libros = snapshot.data!.docs.where((doc) {
@@ -107,6 +119,19 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
 
                   return pasaBusqueda && pasaCarrera && pasaMateria;
                 }).toList();
+
+                // NUEVA VALIDACIÓN DE LA PROFESORA: Cuando sí hay libros pero los filtros los ocultan todos
+                if (libros.isEmpty) {
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(20.0),
+                      child: Text('No hay libros con esas características en estos momentos', 
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)
+                      ),
+                    )
+                  );
+                }
 
                 // Lógica de Ordenamiento (Se mantiene intacta)
                 libros.sort((a, b) {
@@ -228,13 +253,20 @@ class _HoverBookCardState extends State<_HoverBookCard> {
                 Expanded(
                   child: ClipRRect(
                     borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                    child: Image.network(
-                      widget.libroData['fotoUrl'] ?? '',
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => 
-                        const Icon(Icons.book, size: 50, color: Colors.grey),
-                    ),
+                    // SOLUCIÓN CONTRA DATOS DAÑADOS: Operador ternario para proteger Image.network
+                    child: (widget.libroData['fotoUrl'] != null && widget.libroData['fotoUrl'].toString().trim().isNotEmpty)
+                      ? Image.network(
+                          widget.libroData['fotoUrl'],
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => 
+                            const Icon(Icons.book, size: 50, color: Colors.grey),
+                        )
+                      : Container(
+                          width: double.infinity,
+                          color: Colors.grey[300],
+                          child: const Icon(Icons.book, size: 50, color: Colors.grey),
+                        ),
                   ),
                 ),
                 Padding(

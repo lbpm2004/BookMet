@@ -19,14 +19,14 @@ class _PublicarScreenState extends State<PublicarScreen> {
   final _nombreController = TextEditingController();
   final _autoresController = TextEditingController();
   final _descripcionController = TextEditingController();
-  final _detallesFisicosController = TextEditingController(); // NUEVO CONTROLADOR
+  final _detallesFisicosController = TextEditingController(); 
   
   String? _carreraSeleccionada;
   String? _materiaSeleccionada;
   String? _estadoSeleccionado;
   
-  final List<String> _carreras = ['Ingenieria', 'Psicologia', 'Derecho', 'Administracion'];
-  final List<String> _materias = ['Matemáticas 1', 'Matemáticas 2', 'Matemáticas 5', 'Física'];
+  final List<String> _carreras = ['Ingenieria', 'Psicologia', 'Derecho', 'Administracion', 'Economía', 'Educación'];
+  final List<String> _materias = ['Matemáticas 1', 'Matemáticas 2', 'Matemáticas 3', 'Matemáticas 4', 'Matemáticas 5', 'Física 1', 'Física 2', 'Introducción a la Psicología', 'Psicología Cognitiva', 'Psicometría', 'Introducción a Derecho', 'Lógica y Argumentación', 'Derechos Humanos','Principios de Economía', 'Contabilidad 1', 'Finanzas 1','Introducción a las Ciencias Administrativas', 'Estadística 1', 'Gestión del Capital Humano'];
 
   final List<String> _opcionesEstado = [
     'nuevo',
@@ -76,7 +76,7 @@ class _PublicarScreenState extends State<PublicarScreen> {
     _nombreController.dispose();
     _autoresController.dispose();
     _descripcionController.dispose();
-    _detallesFisicosController.dispose(); // LIMPIAR NUEVO CONTROLADOR
+    _detallesFisicosController.dispose();
     super.dispose();
   }
 
@@ -145,7 +145,7 @@ class _PublicarScreenState extends State<PublicarScreen> {
         'carrera': _carreraSeleccionada,
         'estadoFisico': _estadoSeleccionado,
         'descripcion': _descripcionController.text.trim(),
-        'detallesFisicos': _detallesFisicosController.text.trim(), // GUARDAR NUEVO CAMPO
+        'detallesFisicos': _detallesFisicosController.text.trim(), 
         'fotoUrl': portadaUrl,
         'contraportadaUrl': contraportadaUrl,
         'usuarioId': user.uid,
@@ -174,7 +174,7 @@ class _PublicarScreenState extends State<PublicarScreen> {
       _nombreController.clear();
       _autoresController.clear();
       _descripcionController.clear();
-      _detallesFisicosController.clear(); // VACIAR CAMPO AL ENVIAR
+      _detallesFisicosController.clear(); 
       setState(() {
         _carreraSeleccionada = null;
         _materiaSeleccionada = null;
