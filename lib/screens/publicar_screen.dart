@@ -52,7 +52,7 @@ class _PublicarScreenState extends State<PublicarScreen> {
       _nombreController.text = widget.libroAEditar!['titulo'] ?? '';
       _autoresController.text = widget.libroAEditar!['autor'] ?? '';
       _descripcionController.text = widget.libroAEditar!['descripcion'] ?? '';
-      _detallesFisicosController.text = widget.libroAEditar!['detallesFisicos'] ?? ''; // CARGAR DATO SI EXISTE
+      _detallesFisicosController.text = widget.libroAEditar!['detallesFisicos'] ?? ''; 
       
       String materiaGuardada = widget.libroAEditar!['materia'] ?? '';
       if (_materias.contains(materiaGuardada)) {
@@ -97,15 +97,26 @@ class _PublicarScreenState extends State<PublicarScreen> {
     }
   }
 
-  Future<String?> _subirImagenSupabase(Uint8List bytes, String fileName, String folder) async {
+  Future<String?> _subirImagenSupabase(Uint8List bytes, bool esPortada, String uid) async {
     try {
-      final String fullPath = '$folder/${DateTime.now().millisecondsSinceEpoch}_$fileName';
+      final String prefijo = esPortada ? 'portada' : 'contra';
+      final String nombreArchivo = '${prefijo}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      
+      // Armamos la ruta exacta que viste en Supabase: libros -> uid -> archivo.jpg
+      final String rutaCompleta = 'libros/$uid/$nombreArchivo';
+      
       await Supabase.instance.client.storage
-          .from('imagenes_libros')
-          .uploadBinary(fullPath, bytes);
+          // AQUÍ ESTABA EL ERROR: Apuntamos al bucket real
+          .from('publicaciones') 
+          .uploadBinary(
+            rutaCompleta, 
+            bytes,
+            fileOptions: const FileOptions(contentType: 'image/jpeg'),
+          );
+          
       return Supabase.instance.client.storage
-          .from('imagenes_libros')
-          .getPublicUrl(fullPath);
+          .from('publicaciones')
+          .getPublicUrl(rutaCompleta);
     } catch (e) {
       debugPrint("Error subiendo imagen a Supabase: $e");
       return null;
@@ -127,15 +138,16 @@ class _PublicarScreenState extends State<PublicarScreen> {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) throw Exception("Usuario no autenticado");
-
+      
       String? portadaUrl = widget.libroAEditar?['fotoUrl'];
       String? contraportadaUrl = widget.libroAEditar?['contraportadaUrl'];
 
+      // AHORA LE PASAMOS EL user.uid AL MÉTODO
       if (_portadaBytes != null) {
-        portadaUrl = await _subirImagenSupabase(_portadaBytes!, 'portada.$_portadaExtension', user.uid);
+        portadaUrl = await _subirImagenSupabase(_portadaBytes!, true, user.uid);
       }
       if (_contraportadaBytes != null) {
-        contraportadaUrl = await _subirImagenSupabase(_contraportadaBytes!, 'contraportada.$_contraportadaExtension', user.uid);
+        contraportadaUrl = await _subirImagenSupabase(_contraportadaBytes!, false, user.uid);
       }
 
       final Map<String, dynamic> datosLibro = {
@@ -317,7 +329,6 @@ class _PublicarScreenState extends State<PublicarScreen> {
               ),
               const SizedBox(height: 12),
               
-              // CAMPO 1: Detalles Físicos (Mantiene validación original)
               TextFormField(
                 controller: _detallesFisicosController,
                 maxLines: 2,
@@ -331,7 +342,6 @@ class _PublicarScreenState extends State<PublicarScreen> {
               ),
               const SizedBox(height: 12),
 
-              // CAMPO 2: Descripción general (Opcional, sin validación)
               TextFormField(
                 controller: _descripcionController,
                 maxLines: 3,
