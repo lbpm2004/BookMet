@@ -124,7 +124,7 @@ class _HoverMiPublicacionCardState extends State<_HoverMiPublicacionCard> {
     
     Color colorEstado = Colors.grey;
     if (estado == 'DISPONIBLE') colorEstado = Colors.green;
-    if (estado == 'RESERVADO') colorEstado = Colors.blue;
+    if (estado == 'RESERVADO') colorEstado = const Color(0xFF1859A9);
     if (estado == 'PENDIENTE') colorEstado = Colors.orange;
 
     return MouseRegion(
@@ -204,7 +204,7 @@ class _HoverMiPublicacionCardState extends State<_HoverMiPublicacionCard> {
                   itemBuilder: (context) => [
                     const PopupMenuItem(
                       value: 'editar',
-                      child: Row(children: [Icon(Icons.edit, size: 18, color: Colors.blue), SizedBox(width: 8), Text('Editar Libro')]),
+                      child: Row(children: [Icon(Icons.edit, size: 18, color: const Color(0xFF1859A9)), SizedBox(width: 8), Text('Editar Libro')]),
                     ),
                     const PopupMenuItem(
                       value: 'eliminar',

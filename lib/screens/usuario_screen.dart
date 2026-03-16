@@ -48,9 +48,10 @@ class _UsuarioScreenState extends State<UsuarioScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('BookMet', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
         foregroundColor: Colors.orange[800],
         elevation: 1,
+        flexibleSpace: Container(decoration: const BoxDecoration(image: DecorationImage(image: AssetImage('assets/images/Header.png'), fit: BoxFit.cover)),),
         actions: [
           TextButton.icon(
             onPressed: () {
@@ -94,10 +95,10 @@ class _UsuarioScreenState extends State<UsuarioScreen> {
                     padding: EdgeInsets.zero,
                     children: [
                       UserAccountsDrawerHeader(
-                        decoration: BoxDecoration(color: Colors.orange[800]),
+                        decoration: BoxDecoration(color: const Color(0xFFFF8200)),
                         accountName: Row(
                           children: [
-                            Flexible(child: Text('$nombre $apellido', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18), overflow: TextOverflow.ellipsis)),
+                            Flexible(child: Text('$nombre $apellido', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: const Color(0xFFFFFFFF)), overflow: TextOverflow.ellipsis)),
                             const SizedBox(width: 10),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -106,7 +107,7 @@ class _UsuarioScreenState extends State<UsuarioScreen> {
                             ),
                           ],
                         ),
-                        accountEmail: Text(email),
+                        accountEmail: Text(email, style: const TextStyle(color: const Color(0xFFFFFFFF))),
                         // MODIFICACIÓN: Se eliminó el Material e InkWell para quitar el clic
                         currentAccountPicture: Container(
                           decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2)),
@@ -170,7 +171,7 @@ class _UsuarioScreenState extends State<UsuarioScreen> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _indiceSeleccionado,
         onTap: _onItemTapped,
-        selectedItemColor: Colors.orange[800],
+        selectedItemColor: const Color(0xFFFF8200),
         unselectedItemColor: Colors.grey,
         backgroundColor: Colors.white,
         elevation: 8,

@@ -273,7 +273,7 @@ class _HoverBookCardState extends State<_HoverBookCard> {
                   padding: const EdgeInsets.all(8.0),
                   child: Text(
                     widget.libroData['titulo'] ?? 'Sin título',
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                    style: const TextStyle(fontFamily: 'RobotoCondensed', fontSize: 15, fontWeight: FontWeight.bold),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -283,7 +283,7 @@ class _HoverBookCardState extends State<_HoverBookCard> {
                     padding: const EdgeInsets.symmetric(horizontal: 8.0).copyWith(bottom: 8.0),
                     child: Text(
                       widget.libroData['autor'],
-                      style: TextStyle(fontSize: 10, color: Colors.grey[500]),
+                      style: TextStyle(fontSize: 10.5, color: const Color(0xFF1E1E1E)),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),

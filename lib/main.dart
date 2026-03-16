@@ -9,7 +9,7 @@ import 'package:flutter_application_bookmet/screens/registro_screen.dart';
 import 'package:flutter_application_bookmet/screens/login_screen.dart'; 
 import 'package:flutter_application_bookmet/screens/donacion_screen.dart';
 import 'package:flutter_application_bookmet/screens/admin_screen.dart';
-
+import 'package:google_fonts/google_fonts.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,7 +36,11 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'BookMet',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(primaryColor: Colors.orange),
+      theme: ThemeData(
+        primaryColor: const Color(0xFFFF8200),
+        textTheme: GoogleFonts.interTextTheme(
+          Theme.of(context).textTheme).copyWith(displayLarge: GoogleFonts.roboto(fontWeight: FontWeight.bold, color: const Color(0xFF003087)), titleLarge: GoogleFonts.roboto(fontWeight: FontWeight.w600))
+        ),
       initialRoute: '/',
     routes: {
       '/': (context) => const BienvenidaScreen(),

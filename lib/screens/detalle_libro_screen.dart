@@ -64,7 +64,7 @@ class _DetalleLibroScreenState extends State<DetalleLibroScreen> {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (ctx) => const Center(child: CircularProgressIndicator(color: Colors.orange)),
+        builder: (ctx) => const Center(child: CircularProgressIndicator(color: const Color(0xFFFF8200))),
       );
 
       // 1. Enviar solicitud al Admin
@@ -103,6 +103,9 @@ class _DetalleLibroScreenState extends State<DetalleLibroScreen> {
     final bool esMio = widget.libro['usuarioId'] == currentUserId;
     final bool disponible = widget.libro['estado'] == 'DISPONIBLE';
 
+    final double anchoPantalla = MediaQuery.of(context).size.width;
+    final bool esPantallaMovil = anchoPantalla < 600;
+
     // NUEVO: Verificamos si hay detalles físicos guardados
     final bool tieneDetallesFisicos = widget.libro['detallesFisicos'] != null && 
                                       widget.libro['detallesFisicos'].toString().trim().isNotEmpty;
@@ -119,13 +122,14 @@ class _DetalleLibroScreenState extends State<DetalleLibroScreen> {
         backgroundColor: Colors.white,
         child: Icon(isFavorite ? Icons.favorite : Icons.favorite_border, color: isFavorite ? Colors.red : Colors.grey, size: 30),
       ),
+      //WE START MODIFYING ###############################33
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
+        child: esPantallaMovil? Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Center(
-              child: ClipRRect(
+              child: ClipRRect( //"ConstruirPortada()"
                 borderRadius: BorderRadius.circular(12),
                 child: Image.network(
                   widget.libro['fotoUrl'] ?? '',
@@ -135,8 +139,9 @@ class _DetalleLibroScreenState extends State<DetalleLibroScreen> {
                 ),
               ),
             ),
+            //construirInfoDetalla
             const SizedBox(height: 20),
-            Text(widget.libro['titulo'] ?? 'Sin título', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+            Text(widget.libro['titulo'] ?? 'Sin título', style: const TextStyle(fontFamily: 'RobotoCondensed', fontSize: 24, fontWeight: FontWeight.bold)),
             const SizedBox(height: 10),
             _datoFila(Icons.person, 'Autor', widget.libro['autor']),
             _datoFila(Icons.school, 'Carrera', widget.libro['carrera']),
@@ -152,7 +157,7 @@ class _DetalleLibroScreenState extends State<DetalleLibroScreen> {
                   ? widget.libro['descripcion'] 
                   : 'No hay descripción general.', 
               style: const TextStyle(fontSize: 16)
-            ),
+            ), //end of Construirinfodetalllada
             
             // NUEVO: Sección de Detalles del Estado Físico (Solo se muestra si existe)
             if (tieneDetallesFisicos) ...[
@@ -167,19 +172,74 @@ class _DetalleLibroScreenState extends State<DetalleLibroScreen> {
 
             const SizedBox(height: 80), 
           ],
-        ),
+        )
+        : Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+                width: 300, // Ancho fijo para la imagen en pantallas grandes
+                child: ClipRRect( //"ConstruirPortada()"
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    widget.libro['fotoUrl'] ?? '',
+                    height: 400,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => const Icon(Icons.book, size: 100, color: Colors.grey),
+                  ),
+                ),
+            ),
+            const SizedBox(width: 40),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                    //construirInfoDetalla
+                  const SizedBox(height: 20),
+                  Text(widget.libro['titulo'] ?? 'Sin título', style: const TextStyle(fontFamily: 'RobotoCondensed', fontSize: 24, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 10),
+                  _datoFila(Icons.person, 'Autor', widget.libro['autor']),
+                  _datoFila(Icons.school, 'Carrera', widget.libro['carrera']),
+                  _datoFila(Icons.menu_book, 'Materia', widget.libro['materia']),
+                  _datoFila(Icons.info_outline, 'Estado Físico', widget.libro['estadoFisico']?.toString().toUpperCase()),
+                  const SizedBox(height: 20),
+                  
+                  // Sección de Descripción General
+                  const Text('Descripción', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Text(
+                    widget.libro['descripcion'] != null && widget.libro['descripcion'].toString().trim().isNotEmpty 
+                        ? widget.libro['descripcion'] 
+                        : 'No hay descripción general.', 
+                    style: const TextStyle(fontSize: 16)
+                  ), //end of Construirinfodetalllada
+                  
+                  // NUEVO: Sección de Detalles del Estado Físico (Solo se muestra si existe)
+                  if (tieneDetallesFisicos) ...[
+                    const SizedBox(height: 16),
+                    const Text('Detalles de la condición:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
+                    const SizedBox(height: 4),
+                    Text(
+                      widget.libro['detallesFisicos'],
+                      style: const TextStyle(fontSize: 15, fontStyle: FontStyle.italic, color: Colors.black87),
+                    ),
+                  ],
+                ],
+              )
+            )
+          ],
+        )
       ),
       bottomNavigationBar: Container(
         padding: const EdgeInsets.all(20),
         decoration: const BoxDecoration(color: Colors.white, border: Border(top: BorderSide(color: Colors.black12))),
         child: esMio
-            ? const Text('Esta publicación es tuya', textAlign: TextAlign.center, style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold))
+            ? const Text('Esta publicación es tuya', textAlign: TextAlign.center, style: TextStyle(color: const Color(0xFF1859A9), fontWeight: FontWeight.bold))
             : SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: disponible ? () => _solicitarLibro(context) : null,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: disponible ? Colors.orange[800] : Colors.grey,
+                    backgroundColor: disponible ? const Color(0xFFFF8200) : Colors.grey,
                     padding: const EdgeInsets.symmetric(vertical: 15),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))
                   ),
@@ -198,7 +258,7 @@ class _DetalleLibroScreenState extends State<DetalleLibroScreen> {
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
-          Icon(icono, size: 20, color: Colors.orange[800]),
+          Icon(icono, size: 20, color: const Color(0xFFFF8200)),
           const SizedBox(width: 12),
           Text('$titulo: ', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
           Expanded(child: Text(valor?.toString() ?? 'N/A', style: const TextStyle(fontSize: 15))),

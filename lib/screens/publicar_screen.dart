@@ -171,7 +171,7 @@ class _PublicarScreenState extends State<PublicarScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Libro enviado a revisión 🕒. El administrador lo aprobará pronto.'), 
-            backgroundColor: Colors.blueAccent
+            backgroundColor: const Color(0xFF1859A9)
           ),
         );
       } else {

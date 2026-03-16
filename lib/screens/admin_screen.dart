@@ -9,6 +9,7 @@ import 'publicar_screen.dart';
 import 'lista_deseos_screen.dart';
 import 'mis_publicaciones_screen.dart';
 import 'perfil_screen.dart'; // NUEVO: Importamos la pantalla de perfil
+import 'package:google_fonts/google_fonts.dart';
 
 class AdminScreen extends StatefulWidget {
   const AdminScreen({super.key});
@@ -108,7 +109,7 @@ class _AdminScreenState extends State<AdminScreen> {
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Libro recibido en biblioteca 📚✅'), backgroundColor: Colors.blue),
+        const SnackBar(content: Text('Libro recibido en biblioteca 📚✅'), backgroundColor: const Color(0xFF1859A9)),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al devolver: $e'), backgroundColor: Colors.red));
@@ -122,7 +123,8 @@ class _AdminScreenState extends State<AdminScreen> {
         children: [
           Icon(Icons.admin_panel_settings, size: 100, color: Colors.red[800]),
           const SizedBox(height: 20),
-          const Text('Panel de Control', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+          Text('Panel de Control', style: GoogleFonts.roboto(fontSize: 24, fontWeight: FontWeight.bold)
+          ),
           const Text('Modo Administrador Activo', style: TextStyle(color: Colors.grey)),
         ],
       ),
@@ -216,7 +218,7 @@ class _AdminScreenState extends State<AdminScreen> {
                           icon: const Icon(Icons.assignment_return, size: 16),
                           label: const Text('Recibir', style: TextStyle(fontSize: 12)),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue,
+                            backgroundColor: const Color(0xFF1859A9),
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
                           ),

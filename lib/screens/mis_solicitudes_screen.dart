@@ -232,7 +232,7 @@ class _HoverSolicitudCardState extends State<_HoverSolicitudCard> {
       case 'CANCELADA':
       case 'CANCELADO': color = Colors.grey; break;
       case 'DEVUELTA':
-      case 'DEVUELTO': color = Colors.blue; break;
+      case 'DEVUELTO': color = const Color(0xFF1859A9); break;
       default: color = Colors.orange;
     }
     return Container(
@@ -317,7 +317,7 @@ class _HoverSolicitudCardState extends State<_HoverSolicitudCard> {
 
                   Row(
                     children: [
-                      const Icon(Icons.local_library, color: Colors.blue),
+                      const Icon(Icons.local_library, color: const Color(0xFF1859A9)),
                       const SizedBox(width: 8),
                       const Expanded(
                         child: Text(
@@ -331,18 +331,6 @@ class _HoverSolicitudCardState extends State<_HoverSolicitudCard> {
                   const SizedBox(height: 8),
                   Text(widget.tituloLibro, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 12),
-
-                  if (widget.estado == 'PENDIENTE')
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton.icon(
-                          onPressed: widget.onCancelar,
-                          icon: const Icon(Icons.cancel, color: Colors.red, size: 18),
-                          label: const Text('CANCELAR RESERVA', style: TextStyle(color: Colors.red)),
-                        ),
-                      ],
-                    ),
 
                   if (widget.estado == 'ACEPTADA' || widget.estado == 'ACEPTADO')
                     const Padding(
@@ -370,7 +358,7 @@ class _HoverSolicitudCardState extends State<_HoverSolicitudCard> {
                     const Padding(
                       padding: EdgeInsets.only(top: 8),
                       child: Text('📚 Devuelto correctamente a la biblioteca. ¡Gracias por leer!', 
-                        style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 12)),
+                        style: TextStyle(color: const Color(0xFF1859A9), fontWeight: FontWeight.bold, fontSize: 12)),
                     ),
 
                   if (widget.estado == 'CANCELADA' || widget.estado == 'CANCELADO')
@@ -379,6 +367,18 @@ class _HoverSolicitudCardState extends State<_HoverSolicitudCard> {
                       child: Text('🚫 Cancelaste esta reserva.', 
                         style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 12)),
                     ),
+
+                  if (widget.estado == 'PENDIENTE')
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton.icon(
+                          onPressed: widget.onCancelar,
+                          icon: const Icon(Icons.cancel, color: Colors.red, size: 18),
+                          label: const Text('CANCELAR RESERVA', style: TextStyle(color: Colors.red)),
+                        ),
+                      ],
+                    )
                 ],
               ),
             ),
